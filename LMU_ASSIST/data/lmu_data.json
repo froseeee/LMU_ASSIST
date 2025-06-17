@@ -1,172 +1,448 @@
 {
   "cars": {
-    "hypercar": {
-      "name": "Hypercar (LMH/LMDh)",
-      "category": "LMH/LMDh",
+    "hypercar_aston_martin": {
+      "name": "Aston Martin Valkyrie AMR-LMH",
+      "category": "Hypercar",
       "power": 680,
       "weight": 1030,
       "drivetrain": "AWD",
-      "hybrid_system": true
+      "hybrid_system": true,
+      "manufacturer": "Aston Martin",
+      "status": "coming_soon",
+      "setup_ranges": {
+        "front_wing": [1, 15],
+        "rear_wing": [1, 15],
+        "brake_bias": [52, 68],
+        "tire_pressure": {"front": [22.0, 28.0], "rear": [22.0, 28.0]},
+        "hybrid_deployment": [0, 100]
+      }
     },
-    "lmp2": {
-      "name": "LMP2 (ORECA 07 Gibson)",
+    "lmp2_oreca_2023": {
+      "name": "ORECA 07 Gibson (2023)",
       "category": "LMP2",
       "power": 600,
       "weight": 950,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "ORECA",
+      "engine": "Gibson V8",
+      "year": 2023,
+      "setup_ranges": {
+        "front_wing": [1, 12],
+        "rear_wing": [1, 12],
+        "brake_bias": [54, 70],
+        "tire_pressure": {"front": [23.0, 29.0], "rear": [23.0, 29.0]}
+      }
+    },
+    "lmp2_oreca_2024": {
+      "name": "ORECA 07 Gibson (2024)",
+      "category": "LMP2",
+      "power": 600,
+      "weight": 950,
+      "drivetrain": "RWD",
+      "manufacturer": "ORECA",
+      "engine": "Gibson V8",
+      "year": 2024,
+      "setup_ranges": {
+        "front_wing": [1, 12],
+        "rear_wing": [1, 12],
+        "brake_bias": [54, 70],
+        "tire_pressure": {"front": [23.0, 29.0], "rear": [23.0, 29.0]}
+      }
     },
     "lmgt3_aston_martin": {
       "name": "Aston Martin Vantage AMR LMGT3",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Aston Martin",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_bmw": {
-      "name": "BMW M4 LMGT3 (включая Evo)",
+      "name": "BMW M4 LMGT3",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "BMW",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
+    },
+    "lmgt3_bmw_evo": {
+      "name": "BMW M4 LMGT3 Evo",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD",
+      "manufacturer": "BMW",
+      "variant": "Evo",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_corvette": {
       "name": "Chevrolet Corvette Z06 LMGT3.R",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Chevrolet",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_ferrari": {
       "name": "Ferrari 296 LMGT3",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Ferrari",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_ford": {
       "name": "Ford Mustang LMGT3",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Ford",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_lamborghini": {
       "name": "Lamborghini Huracán LMGT3 Evo2",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Lamborghini",
+      "variant": "Evo2",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_lexus": {
       "name": "Lexus RC F LMGT3",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Lexus",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "lmgt3_mclaren": {
-      "name": "McLaren 720S LMGT3 Evo (бесплатный)",
+      "name": "McLaren 720S LMGT3 Evo",
       "category": "LMGT3",
       "power": 520,
       "weight": 1300,
       "drivetrain": "RWD",
-      "free_car": true
+      "manufacturer": "McLaren",
+      "variant": "Evo",
+      "free_car": true,
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     },
     "gte_aston_martin": {
       "name": "Aston Martin Vantage GTE",
       "category": "GTE",
       "power": 520,
       "weight": 1245,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Aston Martin",
+      "setup_ranges": {
+        "front_wing": [1, 10],
+        "rear_wing": [1, 10],
+        "brake_bias": [57, 67],
+        "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
+      }
     },
     "gte_ferrari": {
       "name": "Ferrari 488 GTE Evo",
       "category": "GTE",
       "power": 520,
       "weight": 1245,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Ferrari",
+      "variant": "Evo",
+      "setup_ranges": {
+        "front_wing": [1, 10],
+        "rear_wing": [1, 10],
+        "brake_bias": [57, 67],
+        "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
+      }
     },
     "gte_porsche": {
       "name": "Porsche 911 RSR-19",
       "category": "GTE",
       "power": 520,
       "weight": 1245,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Porsche",
+      "setup_ranges": {
+        "front_wing": [1, 10],
+        "rear_wing": [1, 10],
+        "brake_bias": [57, 67],
+        "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
+      }
     },
     "gte_corvette": {
       "name": "Chevrolet Corvette C8.R",
       "category": "GTE",
       "power": 520,
       "weight": 1245,
-      "drivetrain": "RWD"
+      "drivetrain": "RWD",
+      "manufacturer": "Chevrolet",
+      "setup_ranges": {
+        "front_wing": [1, 10],
+        "rear_wing": [1, 10],
+        "brake_bias": [57, 67],
+        "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
+      }
     }
   },
   "tracks": {
     "bahrain": {
       "name": "Bahrain International Circuit",
+      "full_name": "BIC Outer Track",
       "country": "Bahrain",
       "length": 5.412,
-      "characteristics": ["technical", "desert", "night_race"]
+      "configurations": 4,
+      "characteristics": ["technical", "desert", "night_race", "hot_climate"],
+      "weather_tendency": "dry_hot",
+      "difficulty": "medium",
+      "setup_recommendations": {
+        "aero": "medium_downforce",
+        "suspension": "medium",
+        "brake_bias": "balanced",
+        "reason": "Technical circuit with medium-speed corners"
+      }
     },
     "le_mans": {
       "name": "Circuit de la Sarthe",
-      "country": "France", 
+      "full_name": "Circuit de la Sarthe - Le Mans",
+      "country": "France",
       "length": 13.626,
-      "characteristics": ["very_fast", "long_straights", "historic", "24h"]
+      "configurations": 1,
+      "characteristics": ["very_fast", "long_straights", "historic", "24h", "classic"],
+      "weather_tendency": "variable",
+      "difficulty": "high",
+      "setup_recommendations": {
+        "aero": "minimum_downforce",
+        "suspension": "medium_stiff",
+        "brake_bias": "balanced",
+        "reason": "Long straights require minimum drag setup"
+      },
+      "sectors": [
+        {
+          "name": "Tertre Rouge to Mulsanne",
+          "description": "High-speed section with long straight",
+          "key_corners": ["Tertre Rouge", "Mulsanne Corner"],
+          "setup_focus": "Low drag, brake cooling"
+        },
+        {
+          "name": "Indianapolis to Arnage",
+          "description": "Technical section with chicanes",
+          "key_corners": ["Indianapolis", "Arnage"],
+          "setup_focus": "Stability under braking"
+        },
+        {
+          "name": "Porsche Curves to Start/Finish",
+          "description": "Fast flowing corners",
+          "key_corners": ["Porsche Curves", "Ford Chicanes"],
+          "setup_focus": "Balanced downforce"
+        }
+      ]
     },
     "cota": {
       "name": "Circuit of the Americas",
+      "full_name": "Circuit of the Americas",
       "country": "United States",
       "length": 5.513,
-      "characteristics": ["mixed", "elevation", "technical"]
+      "configurations": 2,
+      "characteristics": ["mixed", "elevation", "technical", "modern"],
+      "weather_tendency": "hot_variable",
+      "difficulty": "medium_high",
+      "setup_recommendations": {
+        "aero": "medium_high_downforce",
+        "suspension": "medium_stiff",
+        "brake_bias": "forward_biased",
+        "reason": "Elevation changes and technical sections"
+      }
     },
     "fuji": {
       "name": "Fuji Speedway",
+      "full_name": "Fuji International Speedway",
       "country": "Japan",
       "length": 4.563,
-      "characteristics": ["fast", "long_straight", "elevation"]
+      "configurations": 1,
+      "characteristics": ["fast", "long_straight", "elevation", "chicanes"],
+      "weather_tendency": "variable",
+      "difficulty": "medium",
+      "setup_recommendations": {
+        "aero": "low_medium_downforce",
+        "suspension": "medium",
+        "brake_bias": "balanced",
+        "reason": "Long straight with technical chicanes"
+      }
     },
     "imola": {
-      "name": "Autodromo Enzo e Dino Ferrari (Imola)",
+      "name": "Autodromo Enzo e Dino Ferrari",
+      "full_name": "Autodromo Internazionale Enzo e Dino Ferrari",
       "country": "Italy",
       "length": 4.909,
-      "characteristics": ["technical", "narrow", "historic"]
+      "configurations": 1,
+      "characteristics": ["technical", "narrow", "historic", "challenging"],
+      "weather_tendency": "mild",
+      "difficulty": "high",
+      "dlc": "2024",
+      "setup_recommendations": {
+        "aero": "high_downforce",
+        "suspension": "soft_medium",
+        "brake_bias": "forward_biased",
+        "reason": "Technical circuit with limited overtaking opportunities"
+      }
     },
     "interlagos": {
-      "name": "Autódromo José Carlos Pace (Interlagos)",
+      "name": "Autódromo José Carlos Pace",
+      "full_name": "Autódromo José Carlos Pace (Interlagos)",
       "country": "Brazil",
       "length": 4.309,
-      "characteristics": ["technical", "elevation", "anti_clockwise"]
+      "configurations": 1,
+      "characteristics": ["technical", "elevation", "anti_clockwise", "challenging"],
+      "weather_tendency": "tropical_variable",
+      "difficulty": "high",
+      "setup_recommendations": {
+        "aero": "medium_high_downforce",
+        "suspension": "medium",
+        "brake_bias": "balanced",
+        "reason": "Elevation changes and technical layout"
+      }
     },
     "monza": {
       "name": "Autodromo Nazionale Monza",
+      "full_name": "Autodromo Nazionale Monza",
       "country": "Italy",
       "length": 5.793,
-      "characteristics": ["very_fast", "low_downforce", "slipstream", "historic"]
+      "configurations": 1,
+      "characteristics": ["very_fast", "low_downforce", "slipstream", "historic", "temple_of_speed"],
+      "weather_tendency": "hot_dry",
+      "difficulty": "medium",
+      "setup_recommendations": {
+        "aero": "minimum_downforce",
+        "suspension": "stiff",
+        "brake_bias": "forward_biased",
+        "reason": "High speed circuit requiring minimum drag"
+      }
     },
     "portimao": {
       "name": "Autódromo Internacional do Algarve",
+      "full_name": "Autódromo Internacional do Algarve",
       "country": "Portugal",
       "length": 4.692,
-      "characteristics": ["technical", "elevation", "blind_corners"]
+      "configurations": 1,
+      "characteristics": ["technical", "elevation", "blind_corners", "challenging"],
+      "weather_tendency": "mild_windy",
+      "difficulty": "high",
+      "setup_recommendations": {
+        "aero": "medium_high_downforce",
+        "suspension": "medium_stiff",
+        "brake_bias": "balanced",
+        "reason": "Elevation changes and blind corners"
+      }
     },
     "sebring": {
       "name": "Sebring International Raceway",
+      "full_name": "Sebring International Raceway",
       "country": "United States",
       "length": 6.019,
-      "characteristics": ["bumpy", "rough_surface", "endurance", "historic"]
+      "configurations": 1,
+      "characteristics": ["bumpy", "rough_surface", "endurance", "historic", "challenging"],
+      "weather_tendency": "hot_dry",
+      "difficulty": "high",
+      "setup_recommendations": {
+        "aero": "medium_downforce",
+        "suspension": "very_stiff",
+        "brake_bias": "forward_biased",
+        "reason": "Rough surface requires stiff suspension"
+      }
     },
     "spa": {
       "name": "Circuit de Spa-Francorchamps",
+      "full_name": "Circuit de Spa-Francorchamps",
       "country": "Belgium",
       "length": 7.004,
-      "characteristics": ["fast", "elevation", "weather_variable", "historic"]
+      "configurations": 1,
+      "characteristics": ["fast", "elevation", "weather_variable", "historic", "challenging"],
+      "weather_tendency": "changeable",
+      "difficulty": "high",
+      "setup_recommendations": {
+        "aero": "medium_downforce",
+        "suspension": "medium_stiff",
+        "brake_bias": "balanced",
+        "reason": "Mixed layout with elevation and weather challenges"
+      }
     },
     "lusail": {
       "name": "Lusail International Circuit",
+      "full_name": "Lusail International Circuit",
       "country": "Qatar",
       "length": 5.380,
-      "characteristics": ["modern", "desert", "night_capable"]
+      "configurations": 1,
+      "characteristics": ["modern", "desert", "night_capable", "hot_climate", "technical"],
+      "weather_tendency": "desert",
+      "difficulty": "medium",
+      "dlc": "latest",
+      "setup_recommendations": {
+        "aero": "medium_downforce",
+        "suspension": "medium",
+        "brake_bias": "balanced",
+        "reason": "Modern technical circuit in desert conditions"
+      }
     }
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "last_updated": "2025-06-17",
+    "game_version": "1.0+",
+    "total_cars": 16,
+    "total_tracks": 11,
+    "total_configurations": 19
   }
 }
