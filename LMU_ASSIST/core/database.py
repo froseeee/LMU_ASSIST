@@ -7,30 +7,16 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 from contextlib import contextmanager
 
-from .constants import ErrorMessages
-
-
-class DatabaseError(Exception):
-    """Базовая ошибка базы данных"""
-    pass
-
-
-class DatabaseConnectionError(DatabaseError):
-    """Ошибка подключения к базе данных"""
-    pass
-
-
-class DatabaseQueryError(DatabaseError):
-    """Ошибка выполнения запроса"""
-    pass
+from .constants import ErrorMessages, DatabaseConstants
+from .exceptions import DatabaseError, DatabaseConnectionError, DatabaseQueryError
 
 
 class DatabaseManager:
     """Улучшенный менеджер базы данных с proper resource management"""
     
-    def __init__(self, db_name=None):
-        self.logger = logging.getLogger(__name__)  # Инициализируем логгер ПЕРВЫМ
-        self.db_name = db_name or "lmu_data.db"  # Используем строку напрямую для избежания circular import
+    def __init__(self, db_name: str = None):
+        self.logger = logging.getLogger(__name__)
+        self.db_name = db_name or DatabaseConstants.DEFAULT_DB_NAME
         self.db_path = Path(self.db_name)
         self._conn = None
         self._lock = threading.RLock()
@@ -57,6 +43,8 @@ class DatabaseManager:
     def _is_connection_closed(self) -> bool:
         """Проверка состояния соединения"""
         try:
+            if self._conn is None:
+                return True
             self._conn.execute("SELECT 1")
             return False
         except (sqlite3.ProgrammingError, AttributeError):
@@ -287,7 +275,7 @@ class DatabaseManager:
                     session_type: str = None, limit: int = None) -> List[Dict]:
         """Получение сессий с улучшенной фильтрацией"""
         try:
-            limit = limit or 50  # Используем число напрямую
+            limit = limit or DatabaseConstants.MAX_SESSIONS_DISPLAY
             
             with self.get_cursor() as cursor:
                 query = "SELECT * FROM sessions WHERE 1=1"
@@ -317,7 +305,7 @@ class DatabaseManager:
                      valid_only: bool = True, limit: int = None) -> List[Dict]:
         """Получение лучших кругов"""
         try:
-            limit = limit or 100  # Используем число напрямую
+            limit = limit or DatabaseConstants.MAX_LAPS_DISPLAY
             
             with self.get_cursor() as cursor:
                 query = """
@@ -435,7 +423,7 @@ class DatabaseManager:
     def cleanup_old_data(self, days_to_keep: int = None) -> bool:
         """Очистка старых данных"""
         try:
-            days_to_keep = days_to_keep or 90  # Используем число напрямую
+            days_to_keep = days_to_keep or DatabaseConstants.AUTO_CLEANUP_DAYS
             cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_to_keep)
             
             with self.get_cursor() as cursor:
@@ -515,7 +503,7 @@ class DatabaseManager:
     def close(self):
         """Закрытие соединения с базой данных"""
         with self._lock:
-            if self._conn:
+            if self._conn and not self._is_connection_closed():
                 try:
                     self._conn.close()
                     self.logger.debug("Database connection closed")
@@ -523,7 +511,3 @@ class DatabaseManager:
                     self.logger.error(f"Error closing database connection: {e}")
                 finally:
                     self._conn = None
-
-    def __del__(self):
-        """Деструктор для гарантированного закрытия соединения"""
-        self.close()
