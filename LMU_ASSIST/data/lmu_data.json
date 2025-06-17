@@ -235,6 +235,22 @@
         "brake_bias": [57, 67],
         "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
       }
+    },
+    "lmgt3_porsche": {
+      "name": "Porsche 911 GT3 R LMGT3",
+      "category": "LMGT3",
+      "power": 565,
+      "weight": 1317,
+      "drivetrain": "RWD",
+      "manufacturer": "Porsche",
+      "engine": "4.2L Straight-6 N/A",
+      "transmission": "6-speed sequential",
+      "setup_ranges": {
+        "front_wing": [1, 8],
+        "rear_wing": [1, 8],
+        "brake_bias": [55, 66],
+        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
+      }
     }
   },
   "tracks": {
@@ -438,10 +454,10 @@
     }
   },
   "metadata": {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "last_updated": "2025-06-17",
     "game_version": "1.0+",
-    "total_cars": 16,
+    "total_cars": 17,
     "total_tracks": 11,
     "total_configurations": 19
   }
