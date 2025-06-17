@@ -3,7 +3,7 @@ import struct
 import threading
 import time
 import logging
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, List
 from dataclasses import dataclass
 
 from .constants import TelemetryConstants, NetworkConstants, ValidationConstants
