@@ -7,7 +7,7 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 from contextlib import contextmanager
 
-from .constants import DatabaseConstants, ErrorMessages
+from .constants import ErrorMessages
 
 
 class DatabaseError(Exception):
@@ -29,11 +29,11 @@ class DatabaseManager:
     """Улучшенный менеджер базы данных с proper resource management"""
     
     def __init__(self, db_name=None):
-        self.db_name = db_name or DatabaseConstants.DEFAULT_DB_NAME
+        self.logger = logging.getLogger(__name__)  # Инициализируем логгер ПЕРВЫМ
+        self.db_name = db_name or "lmu_data.db"  # Используем строку напрямую для избежания circular import
         self.db_path = Path(self.db_name)
         self._conn = None
         self._lock = threading.RLock()
-        self.logger = logging.getLogger(__name__)
         
         # Создаем директорию если нужно
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -287,7 +287,7 @@ class DatabaseManager:
                     session_type: str = None, limit: int = None) -> List[Dict]:
         """Получение сессий с улучшенной фильтрацией"""
         try:
-            limit = limit or DatabaseConstants.MAX_SESSIONS_DISPLAY
+            limit = limit or 50  # Используем число напрямую
             
             with self.get_cursor() as cursor:
                 query = "SELECT * FROM sessions WHERE 1=1"
@@ -317,7 +317,7 @@ class DatabaseManager:
                      valid_only: bool = True, limit: int = None) -> List[Dict]:
         """Получение лучших кругов"""
         try:
-            limit = limit or DatabaseConstants.MAX_LAPS_DISPLAY
+            limit = limit or 100  # Используем число напрямую
             
             with self.get_cursor() as cursor:
                 query = """
@@ -435,7 +435,7 @@ class DatabaseManager:
     def cleanup_old_data(self, days_to_keep: int = None) -> bool:
         """Очистка старых данных"""
         try:
-            days_to_keep = days_to_keep or DatabaseConstants.AUTO_CLEANUP_DAYS
+            days_to_keep = days_to_keep or 90  # Используем число напрямую
             cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_to_keep)
             
             with self.get_cursor() as cursor:
