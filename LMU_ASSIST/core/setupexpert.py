@@ -3,17 +3,24 @@ import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
+from .constants import AppConstants, SetupConstants
+from .exceptions import FileError, FileNotFoundError, ValidationError
+
+
 class SetupExpert:
     """Экспертная система для оптимизации настроек автомобиля"""
     
-    def __init__(self, data_file=None):
+    def __init__(self, data_file: str = None):
         self.logger = logging.getLogger(__name__)
         
-        # Загружаем данные о машинах и трассах
+        # Определяем путь к файлу данных
         if data_file:
-            self.data = self._load_data(data_file)
+            self.data_file_path = Path(data_file)
         else:
-            self.data = self._get_default_data()
+            self.data_file_path = Path(AppConstants.DATA_DIR) / "lmu_data.json"
+        
+        # Загружаем данные о машинах и трассах
+        self.data = self._load_data()
         
         # Базовые правила настройки для Le Mans Ultimate
         self.setup_rules = {
@@ -71,13 +78,28 @@ class SetupExpert:
             }
         }
     
-    def _load_data(self, data_file: str) -> Dict[str, Any]:
-        """Загрузка данных из файла"""
+    def _load_data(self) -> Dict[str, Any]:
+        """Загрузка данных из файла с обработкой ошибок"""
         try:
-            with open(data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            if not self.data_file_path.exists():
+                self.logger.warning(f"Data file not found: {self.data_file_path}")
+                return self._get_default_data()
+            
+            with open(self.data_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            self.logger.info(f"Data loaded successfully from {self.data_file_path}")
+            return data
+            
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in data file: {e}")
+            raise FileError(f"Invalid JSON format in {self.data_file_path}: {e}")
+        except PermissionError as e:
+            self.logger.error(f"Permission denied reading data file: {e}")
+            raise FileError(f"Permission denied: {e}")
         except Exception as e:
             self.logger.error(f"Error loading data file: {e}")
+            self.logger.info("Using default data")
             return self._get_default_data()
     
     def _get_default_data(self) -> Dict[str, Any]:
@@ -92,10 +114,10 @@ class SetupExpert:
                     "drivetrain": "AWD",
                     "hybrid_system": True,
                     "setup_ranges": {
-                        "front_wing": [1, 15],
-                        "rear_wing": [1, 15],
-                        "brake_bias": [52, 68],
-                        "tire_pressure": {"front": [22.0, 28.0], "rear": [22.0, 28.0]},
+                        "front_wing": SetupConstants.WING_RANGE,
+                        "rear_wing": SetupConstants.WING_RANGE,
+                        "brake_bias": SetupConstants.BRAKE_BIAS_RANGE,
+                        "tire_pressure": {"front": SetupConstants.TIRE_PRESSURE_RANGE, "rear": SetupConstants.TIRE_PRESSURE_RANGE},
                         "hybrid_deployment": [0, 100]
                     }
                 },
@@ -198,7 +220,7 @@ class SetupExpert:
             adjustments.update(endurance_adjustments)
             
             # Специальный анализ для гиперкаров
-            if car_type == "hypercar":
+            if "hypercar" in car_type.lower():
                 hypercar_adjustments = self._analyze_hypercar_specific(telemetry, explanations)
                 adjustments.update(hypercar_adjustments)
             
@@ -223,27 +245,31 @@ class SetupExpert:
             
         except Exception as e:
             self.logger.error(f"Error generating setup recommendations: {e}")
-            return {"adjustments": {}, "explanations": ["Ошибка при генерации рекомендаций"], "confidence": 0}
+            return {
+                "adjustments": {}, 
+                "explanations": ["Ошибка при генерации рекомендаций"], 
+                "confidence": 0
+            }
     
     def _analyze_temperature(self, conditions: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
         """Анализ температурных условий для Le Mans Ultimate"""
         adjustments = {}
-        temp = conditions.get("temperature", 25)
+        temp = conditions.get("temperature", SetupConstants.OPTIMAL_TEMPERATURE)
         track_name = conditions.get("track", "")
         
-        if track_name in ["bahrain", "lusail"] and temp > 45:
+        if track_name in ["bahrain", "lusail"] and temp > SetupConstants.EXTREME_HOT_TEMPERATURE:
             adjustments["tire_pressure_front"] = +2.5
             adjustments["tire_pressure_rear"] = +2.5
             adjustments["front_wing"] = -3
             adjustments["rear_wing"] = -3
             explanations.append(f"Экстремальная жара ({temp}°C) в пустыне: максимальные корректировки")
-        elif temp > 35:
+        elif temp > SetupConstants.HOT_TEMPERATURE:
             adjustments["tire_pressure_front"] = +1.5
             adjustments["tire_pressure_rear"] = +1.5
             adjustments["front_wing"] = -2
             adjustments["rear_wing"] = -2
             explanations.append(f"Высокая температура ({temp}°C): увеличено давление, снижен прижим")
-        elif temp < 15:
+        elif temp < SetupConstants.COLD_TEMPERATURE:
             adjustments["tire_pressure_front"] = -1.0
             adjustments["tire_pressure_rear"] = -1.0
             adjustments["front_wing"] = +1
@@ -428,9 +454,9 @@ class SetupExpert:
             confidence_factors.append(0.7)
         
         if not confidence_factors:
-            return 0.5
+            return SetupConstants.BASE_CONFIDENCE
         
-        return sum(confidence_factors) / len(confidence_factors)
+        return min(sum(confidence_factors) / len(confidence_factors), 1.0)
     
     def get_available_tracks(self) -> List[str]:
         """Получение списка доступных трасс"""
@@ -465,7 +491,7 @@ class SetupExpert:
         
         return car_data
     
-    def explain_adjustments(self, adjustments: Dict[str, Any], explanations: List[str]):
+    def explain_adjustments(self, adjustments: Dict[str, Any], explanations: List[str]) -> List[str]:
         """Подробное объяснение настроек"""
         detailed_explanations = []
         
