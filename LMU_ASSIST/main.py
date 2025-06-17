@@ -42,13 +42,15 @@ class MainWindow(QMainWindow):
     def __init__(self, config_manager=None):
         super().__init__()
         
+        # Инициализация логгера ПЕРВЫМ
+        self.logger = logging.getLogger(__name__)
+        
         # Инициализация компонентов
         self.config_manager = config_manager or ConfigManager()
         self.event_system = EventSystem()
         
         try:
             self.database = DatabaseManager()
-            self.logger = logging.getLogger(__name__)
             self.logger.info("Database initialized: lmu_data.db")
         except Exception as e:
             self.logger.error(f"Database initialization failed: {e}")
