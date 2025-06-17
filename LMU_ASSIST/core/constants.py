@@ -114,6 +114,8 @@ class MLConstants:
 
 class DatabaseConstants:
     """Константы базы данных"""
+    DEFAULT_DB_NAME = "lmu_data.db"  # Добавляем недостающую константу
+    
     # Лимиты
     MAX_SESSIONS_DISPLAY = 50
     MAX_LAPS_DISPLAY = 100
