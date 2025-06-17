@@ -1,547 +1,454 @@
-import json
+import socket
+import struct
+import threading
+import time
 import logging
-from typing import Dict, Any, Optional, List
-from pathlib import Path
+from typing import Dict, Any, Optional, Callable
+from dataclasses import dataclass
 
-from .constants import AppConstants, SetupConstants
-from .exceptions import FileError, FileNotFoundError, ValidationError
+from .constants import TelemetryConstants, NetworkConstants, ValidationConstants
+from .exceptions import TelemetryConnectionError, TelemetryDataError, TelemetryTimeoutError
 
 
-class SetupExpert:
-    """Экспертная система для оптимизации настроек автомобиля"""
+@dataclass
+class TelemetryData:
+    """Структура данных телеметрии Le Mans Ultimate"""
+    # Базовые данные
+    timestamp: float
+    lap_time: float
+    lap_distance: float
+    lap_completion: float
     
-    def __init__(self, data_file: str = None):
+    # Движение
+    speed: float  # км/ч
+    rpm: float
+    gear: int
+    
+    # Управление
+    throttle: float  # 0.0 - 1.0
+    brake: float     # 0.0 - 1.0
+    steering: float  # -1.0 - 1.0 (градусы/45)
+    
+    # Позиция
+    position_x: float
+    position_y: float
+    position_z: float
+    
+    # Физика
+    velocity_x: float
+    velocity_y: float
+    velocity_z: float
+    
+    # Дополнительные данные
+    fuel_level: float
+    tire_temp_fl: float
+    tire_temp_fr: float
+    tire_temp_rl: float
+    tire_temp_rr: float
+    
+    @classmethod
+    def from_udp_data(cls, raw_data: bytes) -> 'TelemetryData':
+        """Создание объекта из UDP данных"""
+        # Простой парсинг UDP пакета LMU
+        # Формат может отличаться в зависимости от версии игры
+        try:
+            if len(raw_data) < 200:  # Минимальный размер пакета
+                raise TelemetryDataError("UDP packet too small")
+            
+            # Распаковываем основные поля (примерная структура)
+            values = struct.unpack('<ffffffffiifffffffffffffffff', raw_data[:100])
+            
+            return cls(
+                timestamp=time.time(),
+                lap_time=values[0],
+                lap_distance=values[1],
+                lap_completion=values[2],
+                speed=values[3],
+                rpm=values[4],
+                gear=values[5],
+                throttle=max(0.0, min(1.0, values[6])),
+                brake=max(0.0, min(1.0, values[7])),
+                steering=max(-1.0, min(1.0, values[8])),
+                position_x=values[9],
+                position_y=values[10],
+                position_z=values[11],
+                velocity_x=values[12],
+                velocity_y=values[13],
+                velocity_z=values[14],
+                fuel_level=values[15],
+                tire_temp_fl=values[16],
+                tire_temp_fr=values[17],
+                tire_temp_rl=values[18],
+                tire_temp_rr=values[19]
+            )
+            
+        except (struct.error, IndexError) as e:
+            raise TelemetryDataError(f"Failed to parse UDP data: {e}")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Преобразование в словарь"""
+        return {
+            'timestamp': self.timestamp,
+            'lap_time': self.lap_time,
+            'lap_distance': self.lap_distance,
+            'lap_completion': self.lap_completion,
+            'speed': self.speed,
+            'rpm': self.rpm,
+            'gear': self.gear,
+            'throttle': self.throttle,
+            'brake': self.brake,
+            'steering': self.steering,
+            'position_x': self.position_x,
+            'position_y': self.position_y,
+            'position_z': self.position_z,
+            'velocity_x': self.velocity_x,
+            'velocity_y': self.velocity_y,
+            'velocity_z': self.velocity_z,
+            'fuel_level': self.fuel_level,
+            'tire_temp_fl': self.tire_temp_fl,
+            'tire_temp_fr': self.tire_temp_fr,
+            'tire_temp_rl': self.tire_temp_rl,
+            'tire_temp_rr': self.tire_temp_rr
+        }
+
+
+class TelemetryReceiver:
+    """UDP приемник телеметрии для Le Mans Ultimate"""
+    
+    def __init__(self, port: int = None, timeout: float = None):
+        self.port = port or TelemetryConstants.DEFAULT_PORT
+        self.timeout = timeout or TelemetryConstants.DEFAULT_TIMEOUT
+        
         self.logger = logging.getLogger(__name__)
         
-        # Определяем путь к файлу данных
-        if data_file:
-            self.data_file_path = Path(data_file)
-        else:
-            self.data_file_path = Path(AppConstants.DATA_DIR) / "lmu_data.json"
+        # Состояние соединения
+        self.socket = None
+        self.is_listening = False
+        self.is_connected = False
         
-        # Загружаем данные о машинах и трассах
-        self.data = self._load_data()
+        # Буферы данных
+        self.latest_data = None
+        self.data_history = []
         
-        # Базовые правила настройки для Le Mans Ultimate
-        self.setup_rules = {
-            "temperature": {
-                "hot": {"tire_pressure": +1.5, "wing_adjustment": -1},
-                "cold": {"tire_pressure": -1.0, "wing_adjustment": +1},
-                "optimal": {"tire_pressure": 0, "wing_adjustment": 0},
-                "extreme_hot": {"tire_pressure": +2.5, "wing_adjustment": -2}
-            },
-            "track_characteristics": {
-                "very_fast": {"wing_level": "minimal", "suspension": "stiff", "brake_bias": -1},
-                "fast": {"wing_level": "low", "suspension": "medium_stiff", "brake_bias": 0},
-                "technical": {"wing_level": "high", "suspension": "soft", "brake_bias": +2},
-                "mixed": {"wing_level": "medium", "suspension": "medium", "brake_bias": 0},
-                "bumpy": {"suspension": "very_stiff", "brake_bias": +1},
-                "elevation": {"suspension": "adaptive", "brake_bias": +1}
-            },
-            "weather": {
-                "hot_dry": {"tire_pressure": +1.0, "wing_angle": -1, "brake_bias": +1},
-                "tropical_variable": {"tire_pressure": +0.5, "wing_angle": +1, "brake_bias": 0},
-                "changeable": {"tire_pressure": 0, "wing_angle": +1, "brake_bias": 0},
-                "desert": {"tire_pressure": +2.0, "wing_angle": -2, "brake_bias": +2}
-            },
-            "car_category_specific": {
-                "hypercar": {
-                    "hybrid_optimization": True,
-                    "fuel_efficiency_priority": True,
-                    "aero_efficiency": "critical"
-                },
-                "lmp2": {
-                    "power_fixed": True,
-                    "setup_freedom": "limited",
-                    "tire_management": "important"
-                },
-                "lmgt3": {
-                    "balance_priority": True,
-                    "durability_focus": True,
-                    "bop_considerations": True
-                },
-                "gte": {
-                    "power_curve_optimization": True,
-                    "fuel_strategy": "important"
-                }
-            },
-            "endurance_specific": {
-                "stint_length": {
-                    "short": {"aggressive_setup": True, "tire_pressure": -0.5},
-                    "medium": {"balanced_setup": True, "tire_pressure": 0},
-                    "long": {"conservative_setup": True, "tire_pressure": +0.5}
-                },
-                "race_duration": {
-                    "6_hour": {"tire_degradation": "medium", "fuel_critical": False},
-                    "24_hour": {"tire_degradation": "critical", "fuel_critical": True, "driver_comfort": True}
-                }
-            }
-        }
+        # Потоки
+        self.listen_thread = None
+        self._stop_event = threading.Event()
+        
+        # Колбэки
+        self.data_callbacks: List[Callable[[Dict], None]] = []
+        
+        # Статистика
+        self.packets_received = 0
+        self.packets_invalid = 0
+        self.connection_errors = 0
+        self.last_packet_time = 0
+        
+        self.logger.info(f"Telemetry receiver initialized on port {self.port}")
     
-    def _load_data(self) -> Dict[str, Any]:
-        """Загрузка данных из файла с обработкой ошибок"""
+    def add_data_callback(self, callback: Callable[[Dict], None]):
+        """Добавление колбэка для обработки данных"""
+        self.data_callbacks.append(callback)
+    
+    def remove_data_callback(self, callback: Callable[[Dict], None]):
+        """Удаление колбэка"""
+        if callback in self.data_callbacks:
+            self.data_callbacks.remove(callback)
+    
+    def start_listening(self) -> bool:
+        """Запуск прослушивания UDP"""
+        if self.is_listening:
+            self.logger.warning("Already listening")
+            return True
+        
         try:
-            if not self.data_file_path.exists():
-                self.logger.warning(f"Data file not found: {self.data_file_path}")
-                return self._get_default_data()
+            self._create_socket()
+            self._stop_event.clear()
             
-            with open(self.data_file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            self.logger.info(f"Data loaded successfully from {self.data_file_path}")
-            return data
+            # Запускаем поток прослушивания
+            self.listen_thread = threading.Thread(
+                target=self._listen_loop,
+                name="TelemetryReceiver",
+                daemon=True
+            )
+            self.listen_thread.start()
             
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid JSON in data file: {e}")
-            raise FileError(f"Invalid JSON format in {self.data_file_path}: {e}")
-        except PermissionError as e:
-            self.logger.error(f"Permission denied reading data file: {e}")
-            raise FileError(f"Permission denied: {e}")
-        except Exception as e:
-            self.logger.error(f"Error loading data file: {e}")
-            self.logger.info("Using default data")
-            return self._get_default_data()
-    
-    def _get_default_data(self) -> Dict[str, Any]:
-        """Базовые данные по умолчанию для Le Mans Ultimate"""
-        return {
-            "cars": {
-                "hypercar": {
-                    "name": "Hypercar (LMH/LMDh)",
-                    "category": "LMH/LMDh", 
-                    "power": 680,
-                    "weight": 1030,
-                    "drivetrain": "AWD",
-                    "hybrid_system": True,
-                    "setup_ranges": {
-                        "front_wing": SetupConstants.WING_RANGE,
-                        "rear_wing": SetupConstants.WING_RANGE,
-                        "brake_bias": SetupConstants.BRAKE_BIAS_RANGE,
-                        "tire_pressure": {"front": SetupConstants.TIRE_PRESSURE_RANGE, "rear": SetupConstants.TIRE_PRESSURE_RANGE},
-                        "hybrid_deployment": [0, 100]
-                    }
-                },
-                "lmp2": {
-                    "name": "LMP2 (ORECA 07 Gibson)",
-                    "category": "LMP2",
-                    "power": 600,
-                    "weight": 950,
-                    "drivetrain": "RWD",
-                    "setup_ranges": {
-                        "front_wing": [1, 12],
-                        "rear_wing": [1, 12], 
-                        "brake_bias": [54, 70],
-                        "tire_pressure": {"front": [23.0, 29.0], "rear": [23.0, 29.0]}
-                    }
-                },
-                "lmgt3_mclaren": {
-                    "name": "McLaren 720S LMGT3 Evo",
-                    "category": "LMGT3",
-                    "power": 520,
-                    "weight": 1300,
-                    "drivetrain": "RWD",
-                    "free_car": True,
-                    "setup_ranges": {
-                        "front_wing": [1, 8],
-                        "rear_wing": [1, 8],
-                        "brake_bias": [55, 66],
-                        "tire_pressure": {"front": [25.0, 31.0], "rear": [25.0, 31.0]}
-                    }
-                },
-                "gte_porsche": {
-                    "name": "Porsche 911 RSR-19",
-                    "category": "GTE",
-                    "power": 520,
-                    "weight": 1245,
-                    "drivetrain": "RWD",
-                    "setup_ranges": {
-                        "front_wing": [1, 10],
-                        "rear_wing": [1, 10],
-                        "brake_bias": [57, 67],
-                        "tire_pressure": {"front": [24.0, 30.0], "rear": [24.0, 30.0]}
-                    }
-                }
-            },
-            "tracks": {
-                "le_mans": {
-                    "name": "Circuit de la Sarthe",
-                    "length": 13.626,
-                    "characteristics": ["very_fast", "long_straights"],
-                    "setup_recommendations": {
-                        "aero": "minimum_downforce",
-                        "suspension": "medium_stiff",
-                        "brake_bias": "balanced"
-                    }
-                },
-                "spa": {
-                    "name": "Spa-Francorchamps",
-                    "length": 7.004,
-                    "characteristics": ["fast", "elevation"],
-                    "setup_recommendations": {
-                        "aero": "medium_downforce",
-                        "suspension": "medium_stiff",
-                        "brake_bias": "balanced"
-                    }
-                },
-                "monza": {
-                    "name": "Monza",
-                    "length": 5.793,
-                    "characteristics": ["very_fast", "low_downforce"],
-                    "setup_recommendations": {
-                        "aero": "minimum_downforce",
-                        "suspension": "stiff",
-                        "brake_bias": "forward_biased"
-                    }
-                }
-            }
-        }
-    
-    def recommend_setup(self, conditions: Dict[str, Any], telemetry: Dict[str, Any], 
-                       car_type: str = "hypercar", track_name: str = "le_mans") -> Dict[str, Any]:
-        """Генерация рекомендаций по настройке"""
-        try:
-            adjustments = {}
-            explanations = []
-            
-            # Получаем данные о машине и трассе
-            car_data = self.data.get("cars", {}).get(car_type, {})
-            track_data = self.data.get("tracks", {}).get(track_name, {})
-            
-            # Анализ температурных условий
-            temp_adjustments = self._analyze_temperature(conditions, explanations)
-            adjustments.update(temp_adjustments)
-            
-            # Анализ характеристик трассы
-            track_adjustments = self._analyze_track_specific_lmu(track_data, car_data, explanations)
-            adjustments.update(track_adjustments)
-            
-            # Анализ факторов эндьюранса
-            endurance_adjustments = self._analyze_endurance_factors(conditions, explanations)
-            adjustments.update(endurance_adjustments)
-            
-            # Специальный анализ для гиперкаров
-            if "hypercar" in car_type.lower():
-                hypercar_adjustments = self._analyze_hypercar_specific(telemetry, explanations)
-                adjustments.update(hypercar_adjustments)
-            
-            # Анализ погодных условий
-            weather_adjustments = self._analyze_weather(conditions, explanations)
-            adjustments.update(weather_adjustments)
-            
-            # Анализ телеметрии и стиля пилотирования
-            telemetry_adjustments = self._analyze_telemetry(telemetry, explanations)
-            adjustments.update(telemetry_adjustments)
-            
-            # Проверяем корректность настроек для данной машины
-            validated_adjustments = self._validate_adjustments(adjustments, car_data)
-            
-            return {
-                "adjustments": validated_adjustments,
-                "explanations": explanations,
-                "confidence": self._calculate_confidence(conditions, telemetry),
-                "car_type": car_type,
-                "track_name": track_name
-            }
+            self.is_listening = True
+            self.logger.info(f"Started listening on port {self.port}")
+            return True
             
         except Exception as e:
-            self.logger.error(f"Error generating setup recommendations: {e}")
-            return {
-                "adjustments": {}, 
-                "explanations": ["Ошибка при генерации рекомендаций"], 
-                "confidence": 0
-            }
+            self.logger.error(f"Failed to start listening: {e}")
+            self._cleanup_socket()
+            raise TelemetryConnectionError(f"Failed to bind to port {self.port}: {e}")
     
-    def _analyze_temperature(self, conditions: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
-        """Анализ температурных условий для Le Mans Ultimate"""
-        adjustments = {}
-        temp = conditions.get("temperature", SetupConstants.OPTIMAL_TEMPERATURE)
-        track_name = conditions.get("track", "")
+    def stop_listening(self):
+        """Остановка прослушивания"""
+        if not self.is_listening:
+            return
         
-        if track_name in ["bahrain", "lusail"] and temp > SetupConstants.EXTREME_HOT_TEMPERATURE:
-            adjustments["tire_pressure_front"] = +2.5
-            adjustments["tire_pressure_rear"] = +2.5
-            adjustments["front_wing"] = -3
-            adjustments["rear_wing"] = -3
-            explanations.append(f"Экстремальная жара ({temp}°C) в пустыне: максимальные корректировки")
-        elif temp > SetupConstants.HOT_TEMPERATURE:
-            adjustments["tire_pressure_front"] = +1.5
-            adjustments["tire_pressure_rear"] = +1.5
-            adjustments["front_wing"] = -2
-            adjustments["rear_wing"] = -2
-            explanations.append(f"Высокая температура ({temp}°C): увеличено давление, снижен прижим")
-        elif temp < SetupConstants.COLD_TEMPERATURE:
-            adjustments["tire_pressure_front"] = -1.0
-            adjustments["tire_pressure_rear"] = -1.0
-            adjustments["front_wing"] = +1
-            adjustments["rear_wing"] = +1
-            explanations.append(f"Низкая температура ({temp}°C): снижено давление, увеличен прижим")
-        else:
-            explanations.append(f"Оптимальная температура ({temp}°C): базовые настройки")
+        self.logger.info("Stopping telemetry receiver...")
         
-        return adjustments
+        # Сигнализируем потоку остановиться
+        self._stop_event.set()
+        self.is_listening = False
+        
+        # Закрываем сокет
+        self._cleanup_socket()
+        
+        # Ждем завершения потока
+        if self.listen_thread and self.listen_thread.is_alive():
+            self.listen_thread.join(timeout=2.0)
+        
+        self.logger.info("Telemetry receiver stopped")
     
-    def _analyze_track_specific_lmu(self, track_data: Dict[str, Any], car_data: Dict[str, Any], 
-                                  explanations: List[str]) -> Dict[str, Any]:
-        """Специальный анализ трасс Le Mans Ultimate"""
-        adjustments = {}
-        
-        if not track_data:
-            return adjustments
-        
-        track_name = track_data.get("name", "").lower()
-        characteristics = track_data.get("characteristics", [])
-        
-        if "le_mans" in track_name or "sarthe" in track_name:
-            adjustments["front_wing"] = -5
-            adjustments["rear_wing"] = -5
-            adjustments["differential_coast"] = -15
-            explanations.append("Ле-Ман: минимальное сопротивление, эффективность на прямых")
-        elif "sebring" in track_name:
-            adjustments["front_spring"] = +30
-            adjustments["rear_spring"] = +30
-            adjustments["brake_bias"] = +2
-            explanations.append("Sebring: жесткая подвеска для неровной поверхности")
-        elif "portimao" in track_name or "algarve" in track_name:
-            adjustments["front_spring"] = +10
-            adjustments["rear_spring"] = +10
-            explanations.append("Портимао: усиленная подвеска для холмов")
-        elif "monza" in track_name:
-            adjustments["front_wing"] = -4
-            adjustments["rear_wing"] = -4
-            explanations.append("Монца: минимальный прижим для максимальной скорости")
-        
-        return adjustments
-    
-    def _analyze_endurance_factors(self, conditions: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
-        """Анализ факторов эндьюранса"""
-        adjustments = {}
-        
-        race_duration = conditions.get("race_duration", "6_hour")
-        stint_strategy = conditions.get("stint_strategy", "medium")
-        
-        if race_duration == "24_hour":
-            adjustments["tire_pressure_front"] = +0.5
-            adjustments["tire_pressure_rear"] = +0.5
-            adjustments["brake_bias"] = +1
-            explanations.append("24-часовая гонка: консервативные настройки для надежности")
+    def _create_socket(self):
+        """Создание UDP сокета"""
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket.settimeout(self.timeout)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             
-            if stint_strategy == "long":
-                adjustments["tire_pressure_front"] += 0.5
-                adjustments["tire_pressure_rear"] += 0.5
-                explanations.append("Длинные стинты: дополнительное давление для износа шин")
-        elif race_duration == "6_hour":
-            if stint_strategy == "short":
-                adjustments["tire_pressure_front"] = -0.5
-                adjustments["tire_pressure_rear"] = -0.5
-                explanations.append("6-часовая гонка, короткие стинты: агрессивные настройки")
-        
-        return adjustments
-    
-    def _analyze_hypercar_specific(self, telemetry: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
-        """Анализ специфичных для гиперкаров факторов"""
-        adjustments = {}
-        
-        hybrid_efficiency = telemetry.get("hybrid_efficiency", 0.8)
-        fuel_consumption = telemetry.get("fuel_consumption", 1.0)
-        
-        if hybrid_efficiency < 0.7:
-            adjustments["hybrid_deployment"] = -10
-            explanations.append("Низкая эффективность гибрида: снижен агрессивный режим")
-        
-        if fuel_consumption > 1.2:
-            adjustments["front_wing"] = -1
-            adjustments["rear_wing"] = -1
-            explanations.append("Высокий расход топлива: снижен прижим для эффективности")
-        
-        return adjustments
-    
-    def _analyze_weather(self, conditions: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
-        """Анализ погодных условий"""
-        adjustments = {}
-        weather = conditions.get("weather", "dry")
-        
-        if weather == "light_rain":
-            adjustments["tire_pressure_front"] = +2.0
-            adjustments["tire_pressure_rear"] = +2.0
-            adjustments["front_wing"] = +3
-            adjustments["rear_wing"] = +3
-            adjustments["brake_bias"] = -2
-            explanations.append("Легкий дождь: увеличено давление и прижим, смещен тормозной баланс")
-        elif weather == "heavy_rain":
-            adjustments["tire_pressure_front"] = +4.0
-            adjustments["tire_pressure_rear"] = +4.0
-            adjustments["front_wing"] = +6
-            adjustments["rear_wing"] = +6
-            adjustments["brake_bias"] = -4
-            explanations.append("Сильный дождь: максимальные корректировки для безопасности")
-        
-        return adjustments
-    
-    def _analyze_telemetry(self, telemetry: Dict[str, Any], explanations: List[str]) -> Dict[str, Any]:
-        """Анализ телеметрии"""
-        adjustments = {}
-        
-        # Анализ торможения
-        brake_avg = telemetry.get("brake_avg", 0.5)
-        brake_tendency = telemetry.get("brake_tendency", "normal")
-        
-        if brake_avg > 0.9 or brake_tendency == "aggressive":
-            adjustments["brake_bias"] = +2
-            adjustments["front_spring"] = +10
-            explanations.append("Агрессивное торможение: усилен передний тормозной баланс")
-        elif brake_tendency == "late":
-            adjustments["brake_bias"] = -2
-            explanations.append("Позднее торможение: смещен баланс назад для стабильности")
-        
-        # Анализ работы с газом
-        throttle_exit = telemetry.get("throttle_exit", 0.8)
-        if throttle_exit < 0.7:
-            adjustments["differential_power"] = +10
-            adjustments["rear_spring"] = +5
-            explanations.append("Слабая работа с газом: усилен дифференциал на выходе")
-        elif throttle_exit > 0.95:
-            adjustments["differential_power"] = -5
-            explanations.append("Агрессивная работа с газом: смягчен дифференциал")
-        
-        # Анализ баланса автомобиля
-        balance = telemetry.get("balance", "neutral")
-        if balance == "oversteer":
-            adjustments["tire_pressure_rear"] = +0.5
-            adjustments["rear_wing"] = +2
-            adjustments["differential_coast"] = -10
-            explanations.append("Избыточная поворачиваемость: корректировки для стабильности")
-        elif balance == "understeer":
-            adjustments["tire_pressure_front"] = +0.5
-            adjustments["front_wing"] = -2
-            adjustments["differential_power"] = +5
-            explanations.append("Недостаточная поворачиваемость: корректировки для отзывчивости")
-        
-        return adjustments
-    
-    def _validate_adjustments(self, adjustments: Dict[str, Any], car_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Валидация настроек в пределах допустимых значений"""
-        if not car_data or "setup_ranges" not in car_data:
-            return adjustments
-        
-        validated = {}
-        ranges = car_data["setup_ranges"]
-        
-        for param, value in adjustments.items():
-            if param in ranges:
-                param_range = ranges[param]
-                if isinstance(param_range, list) and len(param_range) == 2:
-                    validated[param] = max(param_range[0], min(param_range[1], value))
-                elif isinstance(param_range, dict):
-                    validated[param] = value
+            # Биндим к порту
+            self.socket.bind((NetworkConstants.DEFAULT_BIND_ADDRESS, self.port))
+            
+            self.is_connected = True
+            self.logger.debug(f"Socket bound to port {self.port}")
+            
+        except OSError as e:
+            if e.errno == 10048:  # Address already in use
+                raise TelemetryConnectionError(
+                    f"Port {self.port} is already in use. "
+                    f"Close other telemetry applications or change port."
+                )
             else:
-                validated[param] = value
-        
-        return validated
+                raise TelemetryConnectionError(f"Failed to create socket: {e}")
     
-    def _calculate_confidence(self, conditions: Dict[str, Any], telemetry: Dict[str, Any]) -> float:
-        """Расчет уверенности в рекомендациях"""
-        confidence_factors = []
-        
-        if "temperature" in conditions:
-            confidence_factors.append(0.9)
-        if "weather" in conditions:
-            confidence_factors.append(0.9)
-        if "brake_avg" in telemetry:
-            confidence_factors.append(0.8)
-        if "balance" in telemetry:
-            confidence_factors.append(0.85)
-        if "steering_smoothness" in telemetry:
-            confidence_factors.append(0.7)
-        
-        if not confidence_factors:
-            return SetupConstants.BASE_CONFIDENCE
-        
-        return min(sum(confidence_factors) / len(confidence_factors), 1.0)
+    def _cleanup_socket(self):
+        """Очистка сокета"""
+        if self.socket:
+            try:
+                self.socket.close()
+            except Exception as e:
+                self.logger.warning(f"Error closing socket: {e}")
+            finally:
+                self.socket = None
+                self.is_connected = False
     
-    def get_available_tracks(self) -> List[str]:
-        """Получение списка доступных трасс"""
-        return list(self.data.get("tracks", {}).keys())
-    
-    def get_available_cars(self) -> List[str]:
-        """Получение списка доступных автомобилей"""
-        return list(self.data.get("cars", {}).keys())
-    
-    def get_track_recommendations(self, track_name: str) -> Dict[str, Any]:
-        """Получение общих рекомендаций для трассы"""
-        track_data = self.data.get("tracks", {}).get(track_name, {})
+    def _listen_loop(self):
+        """Основной цикл прослушивания"""
+        self.logger.info("Telemetry listening loop started")
+        consecutive_errors = 0
         
-        if not track_data:
-            return {"error": f"Трасса '{track_name}' не найдена"}
+        while not self._stop_event.is_set() and self.is_listening:
+            try:
+                # Получаем UDP пакет
+                data, addr = self.socket.recvfrom(NetworkConstants.UDP_BUFFER_SIZE)
+                
+                if data:
+                    # Сбрасываем счетчик ошибок при успешном получении данных
+                    consecutive_errors = 0
+                    
+                    # Обрабатываем данные
+                    self._process_packet(data, addr)
+                
+            except socket.timeout:
+                # Таймаут - это нормально, проверяем нужно ли останавливаться
+                continue
+                
+            except Exception as e:
+                consecutive_errors += 1
+                self.connection_errors += 1
+                
+                self.logger.warning(f"Error receiving data: {e}")
+                
+                # Если слишком много ошибок подряд, останавливаемся
+                if consecutive_errors >= NetworkConstants.MAX_CONSECUTIVE_ERRORS:
+                    self.logger.error("Too many consecutive errors, stopping receiver")
+                    break
+                
+                # Небольшая пауза перед повтором
+                time.sleep(NetworkConstants.CONNECTION_RETRY_DELAY)
         
+        self.logger.info("Telemetry listening loop ended")
+    
+    def _process_packet(self, data: bytes, addr: tuple):
+        """Обработка полученного UDP пакета"""
+        try:
+            # Парсим данные телеметрии
+            telemetry = TelemetryData.from_udp_data(data)
+            
+            # Валидируем данные
+            if not self._validate_telemetry_data(telemetry):
+                self.packets_invalid += 1
+                return
+            
+            # Обновляем статистику
+            self.packets_received += 1
+            self.last_packet_time = time.time()
+            
+            # Сохраняем как последние данные
+            telemetry_dict = telemetry.to_dict()
+            self.latest_data = telemetry_dict
+            
+            # Добавляем в историю (ограниченный размер)
+            self.data_history.append(telemetry_dict)
+            if len(self.data_history) > TelemetryConstants.DEFAULT_BUFFER_SIZE:
+                self.data_history.pop(0)
+            
+            # Вызываем колбэки
+            self._notify_callbacks(telemetry_dict)
+            
+        except TelemetryDataError as e:
+            self.packets_invalid += 1
+            self.logger.debug(f"Invalid telemetry data: {e}")
+            
+        except Exception as e:
+            self.packets_invalid += 1
+            self.logger.warning(f"Error processing packet: {e}")
+    
+    def _validate_telemetry_data(self, telemetry: TelemetryData) -> bool:
+        """Валидация данных телеметрии"""
+        try:
+            # Проверяем RPM
+            if not (ValidationConstants.MIN_RPM <= telemetry.rpm <= ValidationConstants.MAX_RPM):
+                return False
+            
+            # Проверяем скорость
+            if not (ValidationConstants.MIN_SPEED <= telemetry.speed <= ValidationConstants.MAX_SPEED):
+                return False
+            
+            # Проверяем передачу
+            if not (-1 <= telemetry.gear <= 8):
+                return False
+            
+            # Проверяем педали
+            if not (0.0 <= telemetry.throttle <= 1.0):
+                return False
+            if not (0.0 <= telemetry.brake <= 1.0):
+                return False
+            
+            # Проверяем руль
+            if not (-1.0 <= telemetry.steering <= 1.0):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.debug(f"Validation error: {e}")
+            return False
+    
+    def _notify_callbacks(self, data: Dict[str, Any]):
+        """Уведомление колбэков о новых данных"""
+        for callback in self.data_callbacks:
+            try:
+                callback(data)
+            except Exception as e:
+                self.logger.warning(f"Error in data callback: {e}")
+    
+    def get_latest_data(self) -> Optional[Dict[str, Any]]:
+        """Получение последних данных телеметрии"""
+        return self.latest_data.copy() if self.latest_data else None
+    
+    def get_data_history(self, count: int = 100) -> List[Dict[str, Any]]:
+        """Получение истории данных"""
+        return self.data_history[-count:] if self.data_history else []
+    
+    def is_receiving_data(self) -> bool:
+        """Проверка получения данных"""
+        if not self.last_packet_time:
+            return False
+        
+        time_since_last = time.time() - self.last_packet_time
+        return time_since_last < TelemetryConstants.CONNECTION_TIMEOUT
+    
+    def get_connection_status(self) -> Dict[str, Any]:
+        """Получение статуса соединения"""
         return {
-            "name": track_data.get("name", track_name),
-            "length": track_data.get("length", 0),
-            "characteristics": track_data.get("characteristics", []),
-            "setup_recommendations": track_data.get("setup_recommendations", {}),
-            "sector_info": track_data.get("sector_info", {}),
-            "weather_tendency": track_data.get("weather_tendency", "unknown")
+            'is_listening': self.is_listening,
+            'is_connected': self.is_connected,
+            'is_receiving_data': self.is_receiving_data(),
+            'port': self.port,
+            'packets_received': self.packets_received,
+            'packets_invalid': self.packets_invalid,
+            'connection_errors': self.connection_errors,
+            'last_packet_time': self.last_packet_time,
+            'time_since_last_packet': time.time() - self.last_packet_time if self.last_packet_time else None
         }
     
-    def get_car_specifications(self, car_type: str) -> Dict[str, Any]:
-        """Получение характеристик автомобиля"""
-        car_data = self.data.get("cars", {}).get(car_type, {})
+    def get_statistics(self) -> Dict[str, Any]:
+        """Получение статистики"""
+        status = self.get_connection_status()
         
-        if not car_data:
-            return {"error": f"Автомобиль '{car_type}' не найден"}
+        total_packets = self.packets_received + self.packets_invalid
+        valid_rate = (self.packets_received / total_packets * 100) if total_packets > 0 else 0
         
-        return car_data
+        status.update({
+            'total_packets': total_packets,
+            'valid_packet_rate': round(valid_rate, 2),
+            'data_history_size': len(self.data_history),
+            'has_latest_data': self.latest_data is not None
+        })
+        
+        return status
     
-    def explain_adjustments(self, adjustments: Dict[str, Any], explanations: List[str]) -> List[str]:
-        """Подробное объяснение настроек"""
-        detailed_explanations = []
-        
-        for param, value in adjustments.items():
-            explanation = f"[{param}]: {value:+.1f}"
-            
-            if "wing" in param.lower():
-                if value > 0:
-                    explanation += " (больше прижима, меньше скорости)"
-                else:
-                    explanation += " (меньше прижима, больше скорости)"
-            elif "brake_bias" in param.lower():
-                if value > 0:
-                    explanation += " (больше торможения передними колесами)"
-                else:
-                    explanation += " (больше торможения задними колесами)"
-            elif "tire_pressure" in param.lower():
-                if value > 0:
-                    explanation += " (выше давление, меньше пятно контакта)"
-                else:
-                    explanation += " (ниже давление, больше пятно контакта)"
-            elif "spring" in param.lower():
-                if value > 0:
-                    explanation += " (жестче подвеска)"
-                else:
-                    explanation += " (мягче подвеска)"
-            
-            detailed_explanations.append(explanation)
-        
-        detailed_explanations.extend(explanations)
-        return detailed_explanations
+    def reset_statistics(self):
+        """Сброс статистики"""
+        self.packets_received = 0
+        self.packets_invalid = 0
+        self.connection_errors = 0
     
-    def compare_setups(self, setup1: Dict[str, Any], setup2: Dict[str, Any]) -> Dict[str, Any]:
-        """Сравнение двух настроек"""
-        comparison = {
-            "differences": {},
-            "recommendations": []
-        }
-        
-        all_params = set(setup1.keys()) | set(setup2.keys())
-        
-        for param in all_params:
-            val1 = setup1.get(param, 0)
-            val2 = setup2.get(param, 0)
+    def __enter__(self):
+        """Context manager entry"""
+        self.start_listening()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit"""
+        self.stop_listening()
+
+
+# Фабричная функция для создания приемника
+def create_telemetry_receiver(config: Dict[str, Any] = None) -> TelemetryReceiver:
+    """Создание приемника телеметрии с конфигурацией"""
+    if config is None:
+        config = {}
+    
+    port = config.get('udp_port', TelemetryConstants.DEFAULT_PORT)
+    timeout = config.get('timeout', TelemetryConstants.DEFAULT_TIMEOUT)
+    
+    receiver = TelemetryReceiver(port=port, timeout=timeout)
+    
+    return receiver
+
+
+# Простая функция для тестирования
+def test_telemetry_receiver():
+    """Тестирование приемника телеметрии"""
+    print("Testing telemetry receiver...")
+    
+    def data_handler(data):
+        print(f"Received: RPM={data.get('rpm', 0):.0f}, "
+              f"Speed={data.get('speed', 0):.0f}, "
+              f"Gear={data.get('gear', 0)}")
+    
+    try:
+        with TelemetryReceiver() as receiver:
+            receiver.add_data_callback(data_handler)
+            print(f"Listening on port {receiver.port}...")
+            print("Start Le Mans Ultimate with UDP telemetry enabled")
+            print("Press Ctrl+C to stop")
             
-            if val1 != val2:
-                comparison["differences"][param] = {
-                    "setup1": val1,
-                    "setup2": val2,
-                    "difference": val2 - val1
-                }
-        
-        return comparison
+            while True:
+                time.sleep(1)
+                status = receiver.get_connection_status()
+                if status['is_receiving_data']:
+                    print(f"Packets: {status['packets_received']}")
+                
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    test_telemetry_receiver()
