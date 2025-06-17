@@ -1,0 +1,23 @@
+2025-06-17 17:09:37,050 - __main__ - INFO - Database initialized: lmu_data.db
+2025-06-17 17:09:37,229 - core.telemetry_receiver - INFO - Telemetry receiver bound to port 20777
+2025-06-17 17:09:37,389 - __main__ - INFO - LMU Assistant started successfully
+2025-06-17 17:09:51,607 - core.telemetry_receiver - ERROR - Failed to bind socket: [WinError 10048] Обычно разрешается только одно использование адреса сокета (протокол/сетевой адрес/порт)
+2025-06-17 17:09:51,607 - core.telemetry_receiver - INFO - Started telemetry listening thread
+2025-06-17 17:10:29,901 - core.telemetry_receiver - INFO - Stopped telemetry receiver
+2025-06-17 17:12:23,988 - __main__ - INFO - Application closing...
+2025-06-17 17:12:23,989 - __main__ - INFO - Application closed successfully
+2025-06-17 17:12:58,797 - __main__ - INFO - Database initialized: lmu_data.db
+2025-06-17 17:12:58,972 - core.telemetry_receiver - INFO - Telemetry receiver bound to port 20777
+2025-06-17 17:12:59,125 - __main__ - INFO - LMU Assistant started successfully
+2025-06-17 17:15:25,542 - __main__ - INFO - Application closing...
+2025-06-17 17:15:25,543 - __main__ - INFO - Application closed successfully
+2025-06-17 17:15:28,334 - __main__ - INFO - Database initialized: lmu_data.db
+2025-06-17 17:15:28,504 - core.telemetry_receiver - INFO - Telemetry receiver bound to port 20777
+2025-06-17 17:15:28,658 - __main__ - INFO - LMU Assistant started successfully
+2025-06-17 17:16:31,024 - __main__ - INFO - Application closing...
+2025-06-17 17:16:31,024 - __main__ - INFO - Application closed successfully
+2025-06-17 17:19:57,126 - __main__ - INFO - Database initialized: lmu_data.db
+2025-06-17 17:19:57,303 - core.telemetry_receiver - INFO - Telemetry receiver bound to port 20777
+2025-06-17 17:19:57,457 - __main__ - INFO - LMU Assistant started successfully
+2025-06-17 17:20:17,103 - __main__ - INFO - Application closing...
+2025-06-17 17:20:17,103 - __main__ - INFO - Application closed successfully

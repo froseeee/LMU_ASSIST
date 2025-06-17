@@ -1,0 +1,13 @@
+{
+  "app_name": "LMU Assistant",
+  "version": "1.0.0",
+  "language": "ru",
+  "log_level": "INFO",
+  "auto_save": true,
+  "auto_save_interval": 300,
+  "database": {
+    "name": "lmu_data.db",
+    "backup_enabled": true,
+    "backup_interval": 3600
+  }
+}

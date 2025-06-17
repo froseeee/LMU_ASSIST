@@ -1,0 +1,172 @@
+{
+  "cars": {
+    "hypercar": {
+      "name": "Hypercar (LMH/LMDh)",
+      "category": "LMH/LMDh",
+      "power": 680,
+      "weight": 1030,
+      "drivetrain": "AWD",
+      "hybrid_system": true
+    },
+    "lmp2": {
+      "name": "LMP2 (ORECA 07 Gibson)",
+      "category": "LMP2",
+      "power": 600,
+      "weight": 950,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_aston_martin": {
+      "name": "Aston Martin Vantage AMR LMGT3",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_bmw": {
+      "name": "BMW M4 LMGT3 (включая Evo)",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_corvette": {
+      "name": "Chevrolet Corvette Z06 LMGT3.R",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_ferrari": {
+      "name": "Ferrari 296 LMGT3",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_ford": {
+      "name": "Ford Mustang LMGT3",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_lamborghini": {
+      "name": "Lamborghini Huracán LMGT3 Evo2",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_lexus": {
+      "name": "Lexus RC F LMGT3",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD"
+    },
+    "lmgt3_mclaren": {
+      "name": "McLaren 720S LMGT3 Evo (бесплатный)",
+      "category": "LMGT3",
+      "power": 520,
+      "weight": 1300,
+      "drivetrain": "RWD",
+      "free_car": true
+    },
+    "gte_aston_martin": {
+      "name": "Aston Martin Vantage GTE",
+      "category": "GTE",
+      "power": 520,
+      "weight": 1245,
+      "drivetrain": "RWD"
+    },
+    "gte_ferrari": {
+      "name": "Ferrari 488 GTE Evo",
+      "category": "GTE",
+      "power": 520,
+      "weight": 1245,
+      "drivetrain": "RWD"
+    },
+    "gte_porsche": {
+      "name": "Porsche 911 RSR-19",
+      "category": "GTE",
+      "power": 520,
+      "weight": 1245,
+      "drivetrain": "RWD"
+    },
+    "gte_corvette": {
+      "name": "Chevrolet Corvette C8.R",
+      "category": "GTE",
+      "power": 520,
+      "weight": 1245,
+      "drivetrain": "RWD"
+    }
+  },
+  "tracks": {
+    "bahrain": {
+      "name": "Bahrain International Circuit",
+      "country": "Bahrain",
+      "length": 5.412,
+      "characteristics": ["technical", "desert", "night_race"]
+    },
+    "le_mans": {
+      "name": "Circuit de la Sarthe",
+      "country": "France", 
+      "length": 13.626,
+      "characteristics": ["very_fast", "long_straights", "historic", "24h"]
+    },
+    "cota": {
+      "name": "Circuit of the Americas",
+      "country": "United States",
+      "length": 5.513,
+      "characteristics": ["mixed", "elevation", "technical"]
+    },
+    "fuji": {
+      "name": "Fuji Speedway",
+      "country": "Japan",
+      "length": 4.563,
+      "characteristics": ["fast", "long_straight", "elevation"]
+    },
+    "imola": {
+      "name": "Autodromo Enzo e Dino Ferrari (Imola)",
+      "country": "Italy",
+      "length": 4.909,
+      "characteristics": ["technical", "narrow", "historic"]
+    },
+    "interlagos": {
+      "name": "Autódromo José Carlos Pace (Interlagos)",
+      "country": "Brazil",
+      "length": 4.309,
+      "characteristics": ["technical", "elevation", "anti_clockwise"]
+    },
+    "monza": {
+      "name": "Autodromo Nazionale Monza",
+      "country": "Italy",
+      "length": 5.793,
+      "characteristics": ["very_fast", "low_downforce", "slipstream", "historic"]
+    },
+    "portimao": {
+      "name": "Autódromo Internacional do Algarve",
+      "country": "Portugal",
+      "length": 4.692,
+      "characteristics": ["technical", "elevation", "blind_corners"]
+    },
+    "sebring": {
+      "name": "Sebring International Raceway",
+      "country": "United States",
+      "length": 6.019,
+      "characteristics": ["bumpy", "rough_surface", "endurance", "historic"]
+    },
+    "spa": {
+      "name": "Circuit de Spa-Francorchamps",
+      "country": "Belgium",
+      "length": 7.004,
+      "characteristics": ["fast", "elevation", "weather_variable", "historic"]
+    },
+    "lusail": {
+      "name": "Lusail International Circuit",
+      "country": "Qatar",
+      "length": 5.380,
+      "characteristics": ["modern", "desert", "night_capable"]
+    }
+  }
+}

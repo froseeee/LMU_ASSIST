@@ -1,0 +1,19 @@
+{
+  "udp_port": 20777,
+  "timeout": 1.0,
+  "buffer_size": 1000,
+  "lap_detection_threshold": 0.95,
+  "data_validation": {
+    "rpm_max": 20000,
+    "speed_max": 500,
+    "gear_range": [
+      -1,
+      8
+    ]
+  },
+  "analysis": {
+    "smoothness_threshold": 0.75,
+    "brake_threshold": 0.85,
+    "throttle_threshold": 0.9
+  }
+}

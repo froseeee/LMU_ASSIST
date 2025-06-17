@@ -1,0 +1,56 @@
+{
+  "enabled": false,
+  "position": [
+    50,
+    50
+  ],
+  "size": [
+    400,
+    200
+  ],
+  "opacity": 0.9,
+  "update_interval": 50,
+  "elements": {
+    "gear": {
+      "enabled": true,
+      "color": "#00FF00",
+      "size": 24
+    },
+    "rpm": {
+      "enabled": true,
+      "color": "#FF4444",
+      "size": 18
+    },
+    "speed": {
+      "enabled": true,
+      "color": "#44DDFF",
+      "size": 18
+    },
+    "throttle": {
+      "enabled": true,
+      "color": "#44FF44",
+      "size": 14
+    },
+    "brake": {
+      "enabled": true,
+      "color": "#FF4444",
+      "size": 14
+    },
+    "lap_time": {
+      "enabled": true,
+      "color": "#FFFF44",
+      "size": 14
+    }
+  },
+  "plot": {
+    "enabled": true,
+    "height": 120,
+    "history_length": 100,
+    "show_legend": true
+  },
+  "hotkeys": {
+    "toggle": "F10",
+    "toggle_plot": "F11",
+    "reset_position": "F12"
+  }
+}
