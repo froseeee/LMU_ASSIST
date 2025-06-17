@@ -2,10 +2,12 @@ import json
 import os
 import logging
 import threading
+import time
+import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from .constants import AppConstants, ErrorMessages
+from .constants import ErrorMessages  # Убираем AppConstants для избежания circular import
 
 
 class ConfigError(Exception):
@@ -22,17 +24,17 @@ class ConfigManager:
     """Улучшенный менеджер конфигурации с валидацией и thread-safety"""
     
     def __init__(self, config_dir: str = None):
-        self.config_dir = Path(config_dir or AppConstants.CONFIG_DIR)
+        self.config_dir = Path(config_dir or "config")  # Используем строку напрямую
         self.config_dir.mkdir(exist_ok=True)
         
         self.logger = logging.getLogger(__name__)
         self._lock = threading.RLock()
         
-        # Пути к файлам конфигурации
-        self.main_config_path = self.config_dir / AppConstants.MAIN_CONFIG_FILE
-        self.telemetry_config_path = self.config_dir / AppConstants.TELEMETRY_CONFIG_FILE
-        self.ui_config_path = self.config_dir / AppConstants.UI_CONFIG_FILE
-        self.overlay_config_path = self.config_dir / AppConstants.OVERLAY_CONFIG_FILE
+        # Пути к файлам конфигурации (используем строки напрямую)
+        self.main_config_path = self.config_dir / "main.json"
+        self.telemetry_config_path = self.config_dir / "telemetry.json"
+        self.ui_config_path = self.config_dir / "ui.json"
+        self.overlay_config_path = self.config_dir / "overlay.json"
         
         # Загружаем конфигурации
         self._load_all_configs()
@@ -66,16 +68,16 @@ class ConfigManager:
     def _get_default_main_config(self) -> Dict[str, Any]:
         """Основная конфигурация по умолчанию"""
         return {
-            "app_name": AppConstants.APP_NAME,
-            "version": AppConstants.VERSION,
+            "app_name": "LMU Assistant",  # Используем строки напрямую
+            "version": "2.0.1",
             "language": "ru",
             "log_level": "INFO",
             "auto_save": True,
             "auto_save_interval": 300,
             "database": {
-                "name": AppConstants.DEFAULT_DB_NAME,
+                "name": "lmu_data.db",
                 "backup_enabled": True,
-                "backup_interval": AppConstants.DB_BACKUP_INTERVAL,
+                "backup_interval": 3600,
                 "cleanup_enabled": True,
                 "cleanup_days": 90
             },
@@ -86,28 +88,26 @@ class ConfigManager:
                 "analytics_enabled": True
             },
             "paths": {
-                "data_dir": AppConstants.DATA_DIR,
-                "models_dir": AppConstants.MODELS_DIR,
-                "logs_dir": AppConstants.LOG_DIR
+                "data_dir": "data",
+                "models_dir": "models",
+                "logs_dir": "logs"
             }
         }
     
     def _get_default_telemetry_config(self) -> Dict[str, Any]:
         """Конфигурация телеметрии по умолчанию"""
-        from .constants import TelemetryConstants
-        
         return {
-            "udp_port": TelemetryConstants.DEFAULT_PORT,
-            "timeout": TelemetryConstants.DEFAULT_TIMEOUT,
-            "buffer_size": TelemetryConstants.DEFAULT_BUFFER_SIZE,
-            "lap_detection_threshold": TelemetryConstants.LAP_COMPLETION_THRESHOLD,
-            "connection_timeout": TelemetryConstants.CONNECTION_TIMEOUT,
-            "update_interval": TelemetryConstants.DEFAULT_UPDATE_INTERVAL,
+            "udp_port": 20777,  # Используем числа напрямую
+            "timeout": 1.0,
+            "buffer_size": 1000,
+            "lap_detection_threshold": 0.95,
+            "connection_timeout": 3.0,
+            "update_interval": 50,
             "data_validation": {
                 "enabled": True,
-                "rpm_max": TelemetryConstants.MAX_RPM,
-                "speed_max": TelemetryConstants.MAX_SPEED_KMH,
-                "gear_range": list(TelemetryConstants.GEAR_RANGE)
+                "rpm_max": 20000,
+                "speed_max": 500,
+                "gear_range": [-1, 8]
             },
             "analysis": {
                 "smoothness_threshold": 0.75,
@@ -125,26 +125,24 @@ class ConfigManager:
     
     def _get_default_ui_config(self) -> Dict[str, Any]:
         """Конфигурация UI по умолчанию"""
-        from .constants import UIConstants
-        
         return {
             "window": {
-                "width": UIConstants.DEFAULT_WINDOW_WIDTH,
-                "height": UIConstants.DEFAULT_WINDOW_HEIGHT,
+                "width": 1280,  # Используем числа напрямую
+                "height": 800,
                 "position": [100, 100],
                 "maximized": False,
                 "always_on_top": False
             },
             "theme": {
                 "name": "dark",
-                "accent_color": UIConstants.ACCENT_COLOR,
+                "accent_color": "#0078d4",
                 "font_family": "Segoe UI",
-                "font_size": UIConstants.DEFAULT_FONT_SIZE
+                "font_size": 12
             },
             "show_tooltips": True,
             "auto_refresh": {
                 "enabled": True,
-                "interval": UIConstants.STATUS_BAR_UPDATE_INTERVAL
+                "interval": 1000
             },
             "tabs": {
                 "default_tab": 0,
@@ -152,7 +150,7 @@ class ConfigManager:
                 "show_icons": True
             },
             "charts": {
-                "update_interval": UIConstants.CHART_UPDATE_INTERVAL,
+                "update_interval": 100,
                 "max_data_points": 1000,
                 "smooth_updates": True
             },
@@ -165,14 +163,12 @@ class ConfigManager:
     
     def _get_default_overlay_config(self) -> Dict[str, Any]:
         """Конфигурация оверлея по умолчанию"""
-        from .constants import UIConstants, TelemetryConstants
-        
         return {
             "enabled": False,
             "position": [50, 50],
             "size": [400, 200],
-            "opacity": UIConstants.DEFAULT_OVERLAY_OPACITY,
-            "update_interval": TelemetryConstants.DEFAULT_UPDATE_INTERVAL,
+            "opacity": 0.9,  # Используем числа напрямую
+            "update_interval": 50,
             "always_on_top": True,
             "click_through": False,
             "elements": {
@@ -296,13 +292,13 @@ class ConfigManager:
     def _validate_config(self, config: Dict[str, Any], config_name: str):
         """Валидация конфигурации"""
         try:
-            if config_name == AppConstants.MAIN_CONFIG_FILE:
+            if config_name == "main.json":  # Используем строки напрямую
                 self._validate_main_config(config)
-            elif config_name == AppConstants.TELEMETRY_CONFIG_FILE:
+            elif config_name == "telemetry.json":
                 self._validate_telemetry_config(config)
-            elif config_name == AppConstants.UI_CONFIG_FILE:
+            elif config_name == "ui.json":
                 self._validate_ui_config(config)
-            elif config_name == AppConstants.OVERLAY_CONFIG_FILE:
+            elif config_name == "overlay.json":
                 self._validate_overlay_config(config)
                 
         except Exception as e:
@@ -339,13 +335,11 @@ class ConfigManager:
         width = window.get('width', 0)
         height = window.get('height', 0)
         
-        from .constants import UIConstants
+        if not isinstance(width, int) or width < 800:  # Используем числа напрямую
+            window['width'] = 1280
         
-        if not isinstance(width, int) or width < UIConstants.MIN_WINDOW_WIDTH:
-            window['width'] = UIConstants.DEFAULT_WINDOW_WIDTH
-        
-        if not isinstance(height, int) or height < UIConstants.MIN_WINDOW_HEIGHT:
-            window['height'] = UIConstants.DEFAULT_WINDOW_HEIGHT
+        if not isinstance(height, int) or height < 600:
+            window['height'] = 800
     
     def _validate_overlay_config(self, config: Dict[str, Any]):
         """Валидация конфигурации оверлея"""
@@ -419,7 +413,7 @@ class ConfigManager:
         """Обновление основной конфигурации"""
         with self._lock:
             self.main_config = self._merge_configs(self.main_config, updates)
-            self._validate_config(self.main_config, AppConstants.MAIN_CONFIG_FILE)
+            self._validate_config(self.main_config, "main.json")
             self._save_config(self.main_config_path, self.main_config)
             self.logger.debug("Main config updated")
     
@@ -427,7 +421,7 @@ class ConfigManager:
         """Обновление конфигурации телеметрии"""
         with self._lock:
             self.telemetry_config = self._merge_configs(self.telemetry_config, updates)
-            self._validate_config(self.telemetry_config, AppConstants.TELEMETRY_CONFIG_FILE)
+            self._validate_config(self.telemetry_config, "telemetry.json")
             self._save_config(self.telemetry_config_path, self.telemetry_config)
             self.logger.debug("Telemetry config updated")
     
@@ -435,7 +429,7 @@ class ConfigManager:
         """Обновление конфигурации UI"""
         with self._lock:
             self.ui_config = self._merge_configs(self.ui_config, updates)
-            self._validate_config(self.ui_config, AppConstants.UI_CONFIG_FILE)
+            self._validate_config(self.ui_config, "ui.json")
             self._save_config(self.ui_config_path, self.ui_config)
             self.logger.debug("UI config updated")
     
@@ -443,7 +437,7 @@ class ConfigManager:
         """Обновление конфигурации оверлея"""
         with self._lock:
             self.overlay_config = self._merge_configs(self.overlay_config, updates)
-            self._validate_config(self.overlay_config, AppConstants.OVERLAY_CONFIG_FILE)
+            self._validate_config(self.overlay_config, "overlay.json")
             self._save_config(self.overlay_config_path, self.overlay_config)
             self.logger.debug("Overlay config updated")
     
@@ -534,7 +528,7 @@ class ConfigManager:
                 'ui': self.get_ui_config(),
                 'overlay': self.get_overlay_config(),
                 'export_timestamp': datetime.datetime.now().isoformat(),
-                'app_version': AppConstants.VERSION
+                'app_version': "2.0.1"  # Используем строку напрямую
             }
             
             with open(export_path, 'w', encoding='utf-8') as f:
