@@ -20,6 +20,8 @@ try:
     from core.config_manager import ConfigManager
     from core.database import DatabaseManager
     from core.event_system import EventSystem
+    from core.constants import AppConstants, UIConstants
+    from core.exceptions import LMUAssistantError, ConfigurationError, DatabaseConnectionError
     
     # UI модули
     from ui.garage import GarageTab
@@ -49,11 +51,18 @@ class MainWindow(QMainWindow):
         self.config_manager = config_manager or ConfigManager()
         self.event_system = EventSystem()
         
+        # Инициализация базы данных с обработкой ошибок
         try:
             self.database = DatabaseManager()
-            self.logger.info("Database initialized: lmu_data.db")
-        except Exception as e:
+            self.logger.info(f"Database initialized: {DatabaseConstants.DEFAULT_DB_NAME}")
+        except DatabaseConnectionError as e:
             self.logger.error(f"Database initialization failed: {e}")
+            self.database = None
+            # Показываем предупреждение пользователю
+            QMessageBox.warning(None, "Database Error", 
+                              f"Failed to initialize database: {e}\n\nSome features may not work properly.")
+        except Exception as e:
+            self.logger.error(f"Unexpected database error: {e}")
             self.database = None
         
         self.setup_ui()
@@ -62,7 +71,7 @@ class MainWindow(QMainWindow):
         # Таймер для периодических обновлений
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.periodic_update)
-        self.update_timer.start(1000)  # Обновление каждую секунду
+        self.update_timer.start(UIConstants.STATUS_BAR_UPDATE_INTERVAL)
         
         self.logger.info("LMU Assistant started successfully")
     
@@ -140,7 +149,7 @@ class MainWindow(QMainWindow):
             
             # Устанавливаем вкладку по умолчанию
             default_tab = self.config_manager.get_setting('ui', 'tabs.default_tab', 0)
-            if default_tab < self.tab_widget.count():
+            if 0 <= default_tab < self.tab_widget.count():
                 self.tab_widget.setCurrentIndex(default_tab)
             
         except Exception as e:
@@ -150,22 +159,27 @@ class MainWindow(QMainWindow):
     def setup_window(self):
         """Настройка окна"""
         # Заголовок и иконка
-        self.setWindowTitle("LMU Assistant v2.0.1")
+        self.setWindowTitle(f"{AppConstants.APP_NAME} v{AppConstants.VERSION}")
         
         # Попытка установить иконку
         try:
-            icon_path = Path("assets/icon.ico")
+            icon_path = Path(AppConstants.ASSETS_DIR) / "icon.ico"
             if icon_path.exists():
                 self.setWindowIcon(QIcon(str(icon_path)))
-        except Exception:
-            pass  # Игнорируем ошибки с иконкой
+        except Exception as e:
+            self.logger.debug(f"Could not set window icon: {e}")
         
         # Размер и позиция окна
         ui_config = self.config_manager.get_ui_config()
         window_config = ui_config.get('window', {})
         
-        width = window_config.get('width', 1280)
-        height = window_config.get('height', 800)
+        width = window_config.get('width', UIConstants.DEFAULT_WINDOW_WIDTH)
+        height = window_config.get('height', UIConstants.DEFAULT_WINDOW_HEIGHT)
+        
+        # Проверяем минимальные размеры
+        width = max(width, UIConstants.MIN_WINDOW_WIDTH)
+        height = max(height, UIConstants.MIN_WINDOW_HEIGHT)
+        
         self.resize(width, height)
         
         position = window_config.get('position', [100, 100])
@@ -175,16 +189,16 @@ class MainWindow(QMainWindow):
             self.showMaximized()
         
         # Стиль окна
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #2b2b2b;
-                color: #ffffff;
-            }
-            QWidget {
-                background-color: #2b2b2b;
-                color: #ffffff;
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {UIConstants.BACKGROUND_COLOR};
+                color: {UIConstants.FOREGROUND_COLOR};
+            }}
+            QWidget {{
+                background-color: {UIConstants.BACKGROUND_COLOR};
+                color: {UIConstants.FOREGROUND_COLOR};
                 font-family: 'Segoe UI', Arial, sans-serif;
-            }
+            }}
         """)
     
     def periodic_update(self):
@@ -194,8 +208,16 @@ class MainWindow(QMainWindow):
             current_tab_index = self.tab_widget.currentIndex()
             tab_names = ["Setup Expert", "Телеметрия", "Прогресс", "Тренер", "Энциклопедия", "Оверлей"]
             
-            if current_tab_index < len(tab_names):
-                self.statusBar().showMessage(f"Активна вкладка: {tab_names[current_tab_index]}")
+            if 0 <= current_tab_index < len(tab_names):
+                status_message = f"Активна вкладка: {tab_names[current_tab_index]}"
+                
+                # Добавляем информацию о базе данных
+                if self.database:
+                    status_message += " | БД: подключена"
+                else:
+                    status_message += " | БД: отключена"
+                
+                self.statusBar().showMessage(status_message)
         
         except Exception as e:
             self.logger.warning(f"Error in periodic update: {e}")
@@ -213,17 +235,26 @@ class MainWindow(QMainWindow):
                 'maximized': self.isMaximized()
             }
             
-            self.config_manager.update_ui_config({'window': window_config})
+            try:
+                self.config_manager.update_ui_config({'window': window_config})
+            except Exception as e:
+                self.logger.error(f"Failed to save window config: {e}")
             
             # Закрываем соединения и освобождаем ресурсы
             if hasattr(self, 'overlay_tab') and self.overlay_tab:
-                self.overlay_tab.cleanup()
+                try:
+                    self.overlay_tab.cleanup()
+                except Exception as e:
+                    self.logger.error(f"Error cleaning up overlay: {e}")
             
             if self.database:
-                self.database.close()
+                try:
+                    self.database.close()
+                except Exception as e:
+                    self.logger.error(f"Error closing database: {e}")
             
             # Останавливаем таймер
-            if self.update_timer.isActive():
+            if self.update_timer and self.update_timer.isActive():
                 self.update_timer.stop()
             
             self.logger.info("Application closed successfully")
@@ -234,11 +265,11 @@ class MainWindow(QMainWindow):
             event.accept()  # Закрываем в любом случае
 
 
-def setup_logging(config_manager):
+def setup_logging(config_manager: ConfigManager) -> bool:
     """Настройка системы логирования"""
     try:
         # Создаем директорию для логов
-        log_dir = Path("logs")
+        log_dir = Path(AppConstants.LOG_DIR)
         log_dir.mkdir(exist_ok=True)
         
         # Получаем уровень логирования из конфигурации
@@ -250,7 +281,8 @@ def setup_logging(config_manager):
         )
         
         # Файл-хендлер
-        file_handler = logging.FileHandler('logs/lmu_assistant.log', encoding='utf-8')
+        log_file = log_dir / 'lmu_assistant.log'
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
         file_handler.setFormatter(formatter)
         
         # Консоль-хендлер
@@ -260,6 +292,10 @@ def setup_logging(config_manager):
         # Корневой логгер
         root_logger = logging.getLogger()
         root_logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
+        
+        # Очищаем существующие хендлеры
+        root_logger.handlers.clear()
+        
         root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
         
@@ -270,7 +306,7 @@ def setup_logging(config_manager):
         return False
 
 
-def check_dependencies():
+def check_dependencies() -> bool:
     """Проверка необходимых зависимостей"""
     missing_deps = []
     
@@ -300,15 +336,37 @@ def check_dependencies():
     return True
 
 
-def create_directories():
+def create_directories() -> bool:
     """Создание необходимых директорий"""
-    directories = ["config", "logs", "assets", "data", "models"]
+    directories = [
+        AppConstants.CONFIG_DIR,
+        AppConstants.LOG_DIR,
+        AppConstants.ASSETS_DIR,
+        AppConstants.DATA_DIR,
+        AppConstants.MODELS_DIR
+    ]
     
+    success = True
     for directory in directories:
         try:
             Path(directory).mkdir(exist_ok=True)
         except Exception as e:
             print(f"Warning: Could not create directory {directory}: {e}")
+            success = False
+    
+    return success
+
+
+def check_data_files() -> bool:
+    """Проверка наличия необходимых файлов данных"""
+    data_file = Path(AppConstants.DATA_DIR) / "lmu_data.json"
+    
+    if not data_file.exists():
+        print(f"Warning: Data file not found: {data_file}")
+        print("Some features may not work properly without the data file.")
+        return False
+    
+    return True
 
 
 def main():
@@ -327,26 +385,41 @@ def main():
         
         # Создание приложения
         app = QApplication(sys.argv)
-        app.setApplicationName("LMU Assistant")
-        app.setApplicationVersion("2.0.1")
-        app.setOrganizationName("LMU Assistant")
+        app.setApplicationName(AppConstants.APP_NAME)
+        app.setApplicationVersion(AppConstants.VERSION)
+        app.setOrganizationName(AppConstants.ORGANIZATION)
         
         # Инициализация конфигурации
-        config_manager = ConfigManager()
+        try:
+            config_manager = ConfigManager()
+        except ConfigurationError as e:
+            print(f"Configuration error: {e}")
+            QMessageBox.critical(None, "Configuration Error", str(e))
+            return 1
         
         # Настройка логирования
         setup_logging(config_manager)
         logger = logging.getLogger(__name__)
         
         logger.info("=" * 50)
-        logger.info("Starting LMU Assistant v2.0.1")
+        logger.info(f"Starting {AppConstants.APP_NAME} v{AppConstants.VERSION}")
         logger.info("=" * 50)
         
-        # Создание и отображение главного окна
-        window = MainWindow(config_manager)
-        window.show()
+        # Проверяем файлы данных
+        check_data_files()
         
-        logger.info("Main window displayed successfully")
+        # Создание и отображение главного окна
+        try:
+            window = MainWindow(config_manager)
+            window.show()
+            
+            logger.info("Main window displayed successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to create main window: {e}")
+            QMessageBox.critical(None, "Startup Error", 
+                               f"Failed to create main window:\n{e}")
+            return 1
         
         # Запуск цикла событий
         exit_code = app.exec_()
@@ -354,9 +427,19 @@ def main():
         logger.info(f"Application exited with code: {exit_code}")
         return exit_code
         
+    except KeyboardInterrupt:
+        print("\nApplication interrupted by user")
+        return 130
+        
     except Exception as e:
         print(f"Critical error during application startup: {e}")
-        logging.error(f"Critical startup error: {e}", exc_info=True)
+        
+        # Логируем если возможно
+        try:
+            logger = logging.getLogger(__name__)
+            logger.critical(f"Critical startup error: {e}", exc_info=True)
+        except:
+            pass
         
         # Показываем диалог с ошибкой если возможно
         try:
