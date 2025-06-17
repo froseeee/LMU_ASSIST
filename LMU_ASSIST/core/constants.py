@@ -86,6 +86,23 @@ class UIConstants:
     CHART_UPDATE_INTERVAL = 100  # мс
 
 
+class DatabaseConstants:
+    """Константы базы данных"""
+    DEFAULT_DB_NAME = "lmu_data.db"
+    
+    # Лимиты
+    MAX_SESSIONS_DISPLAY = 50
+    MAX_LAPS_DISPLAY = 100
+    MAX_COMPLETED_LAPS_STORE = 50
+    
+    # Таймауты
+    DB_CONNECTION_TIMEOUT = 30.0  # секунд
+    DB_QUERY_TIMEOUT = 10.0  # секунд
+    
+    # Очистка
+    AUTO_CLEANUP_DAYS = 90  # дней для хранения старых данных
+
+
 class MLConstants:
     """Константы для машинного обучения"""
     # Обучение
@@ -110,23 +127,6 @@ class MLConstants:
     # Предсказания
     INCIDENT_RISK_WINDOW = 5  # количество точек данных
     TELEMETRY_HISTORY_LENGTH = 100
-
-
-class DatabaseConstants:
-    """Константы базы данных"""
-    DEFAULT_DB_NAME = "lmu_data.db"  # Добавляем недостающую константу
-    
-    # Лимиты
-    MAX_SESSIONS_DISPLAY = 50
-    MAX_LAPS_DISPLAY = 100
-    MAX_COMPLETED_LAPS_STORE = 50
-    
-    # Таймауты
-    DB_CONNECTION_TIMEOUT = 30.0  # секунд
-    DB_QUERY_TIMEOUT = 10.0  # секунд
-    
-    # Очистка
-    AUTO_CLEANUP_DAYS = 90  # дней для хранения старых данных
 
 
 class SetupConstants:
@@ -184,7 +184,7 @@ class NetworkConstants:
     MAX_UDP_RETRIES = 3
     
     # Сеть
-    LOCALHOST = "0.0.0.0"
+    LOCALHOST = "127.0.0.1"
     DEFAULT_BIND_ADDRESS = "0.0.0.0"
     
     # Таймауты
