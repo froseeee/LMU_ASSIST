@@ -98,6 +98,8 @@ class DatabaseConstants:
     # Таймауты
     DB_CONNECTION_TIMEOUT = 30.0  # секунд
     DB_QUERY_TIMEOUT = 10.0  # секунд
+
+    DB_BACKUP_INTERVAL = 3600  # секунд (1 час)
     
     # Очистка
     AUTO_CLEANUP_DAYS = 90  # дней для хранения старых данных
