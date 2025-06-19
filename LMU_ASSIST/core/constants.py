@@ -22,18 +22,30 @@ class AppConstants:
     # Файлы конфигурации
     MAIN_CONFIG_FILE = "main.json"
     UI_CONFIG_FILE = "ui.json"
-    # УБРАЛИ: TELEMETRY_CONFIG_FILE = "telemetry.json"
-    # УБРАЛИ: OVERLAY_CONFIG_FILE = "overlay.json"
+    TELEMETRY_CONFIG_FILE = "telemetry.json"
+    OVERLAY_CONFIG_FILE = "overlay.json"
     
     # База данных
     DEFAULT_DB_NAME = "lmu_data.db"
     DB_BACKUP_INTERVAL = 3600  # секунд
 
 
-# УБРАЛИ ВЕСЬ КЛАСС TelemetryConstants
-# class TelemetryConstants:
-#     """Константы для телеметрии"""
-#     ...
+class TelemetryConstants:
+    """Константы для телеметрии"""
+    DEFAULT_PORT = 20777
+    DEFAULT_TIMEOUT = 1.0
+    DEFAULT_BUFFER_SIZE = 1000
+    LAP_COMPLETION_THRESHOLD = 0.95
+    CONNECTION_TIMEOUT = 30.0
+    DEFAULT_UPDATE_INTERVAL = 50
+    MIN_UPDATE_INTERVAL = 10
+    MAX_UPDATE_INTERVAL = 1000
+    MIN_LAP_DATA_POINTS = 100
+    
+    # Диапазоны значений телеметрии
+    MAX_RPM = 20000
+    MAX_SPEED_KMH = 500
+    GEAR_RANGE = (-1, 8)
 
 
 class UIConstants:
@@ -57,10 +69,10 @@ class UIConstants:
     WARNING_COLOR = "#f59e0b"
     ERROR_COLOR = "#ef4444"
     
-    # УБРАЛИ ОВЕРЛЕЙ:
-    # DEFAULT_OVERLAY_OPACITY = 0.9
-    # MIN_OVERLAY_OPACITY = 0.3
-    # MAX_OVERLAY_OPACITY = 1.0
+    # Оверлей
+    DEFAULT_OVERLAY_OPACITY = 0.9
+    MIN_OVERLAY_OPACITY = 0.3
+    MAX_OVERLAY_OPACITY = 1.0
     
     # Таймауты обновления
     STATUS_BAR_UPDATE_INTERVAL = 1000  # мс
@@ -71,15 +83,18 @@ class DatabaseConstants:
     """Константы для базы данных"""
     # Основные настройки
     DEFAULT_DB_NAME = "lmu_data.db"
-    CONNECTION_TIMEOUT = 30.0
+    DB_CONNECTION_TIMEOUT = 30.0
     
     # Размеры
     MAX_QUERY_LENGTH = 10000
     MAX_RESULT_ROWS = 10000
+    MAX_SESSIONS_DISPLAY = 100
+    MAX_LAPS_DISPLAY = 1000
     
     # Backup
-    BACKUP_INTERVAL = 3600  # секунд
+    DB_BACKUP_INTERVAL = 3600  # секунд
     MAX_BACKUP_FILES = 5
+    AUTO_CLEANUP_DAYS = 30
     
     # Таблицы
     SESSIONS_TABLE = "sessions"
@@ -87,13 +102,23 @@ class DatabaseConstants:
     SETUPS_TABLE = "setups"
     TRACKS_TABLE = "tracks"
     CARS_TABLE = "cars"
-    # УБРАЛИ: TELEMETRY_TABLE = "telemetry"
+    TELEMETRY_TABLE = "telemetry"
 
 
-# УБРАЛИ ВЕСЬ КЛАСС NetworkConstants
-# class NetworkConstants:
-#     """Константы для сетевого взаимодействия"""
-#     ...
+class NetworkConstants:
+    """Константы для сетевого взаимодействия"""
+    # UDP настройки
+    DEFAULT_UDP_PORT = 20777
+    UDP_BUFFER_SIZE = 1024
+    UDP_TIMEOUT = 1.0
+    
+    # TCP настройки
+    DEFAULT_TCP_PORT = 20778
+    TCP_TIMEOUT = 5.0
+    
+    # Retry логика
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1.0
 
 
 class ValidationConstants:
@@ -106,25 +131,49 @@ class ValidationConstants:
     MIN_LAP_TIME = 10.0   # секунд
     MAX_LAP_TIME = 600.0  # секунд
     
-    # УБРАЛИ диапазоны телеметрии:
-    # MIN_RPM = 0
-    # MAX_RPM = 20000
-    # MIN_SPEED = 0
-    # MAX_SPEED = 500  # км/ч
-    # MIN_THROTTLE = 0.0
-    # MAX_THROTTLE = 1.0
-    # MIN_BRAKE = 0.0
-    # MAX_BRAKE = 1.0
-    # MIN_STEERING = -45.0  # градусы
-    # MAX_STEERING = 45.0   # градусы
+    # Диапазоны телеметрии
+    MIN_RPM = 0
+    MAX_RPM = 20000
+    MIN_SPEED = 0
+    MAX_SPEED = 500  # км/ч
+    MIN_THROTTLE = 0.0
+    MAX_THROTTLE = 1.0
+    MIN_BRAKE = 0.0
+    MAX_BRAKE = 1.0
+    MIN_STEERING = -45.0  # градусы
+    MAX_STEERING = 45.0   # градусы
+
+
+class SetupConstants:
+    """Константы для настройки автомобиля"""
+    # Диапазоны параметров
+    WING_RANGE = [1, 15]
+    BRAKE_BIAS_RANGE = [50, 70]
+    TIRE_PRESSURE_RANGE = [20.0, 35.0]
+    SPRING_RANGE = [10, 100]
+    DIFF_RANGE = [10, 90]
+    
+    # Температурные пороги
+    OPTIMAL_TEMPERATURE = 25.0
+    HOT_TEMPERATURE = 30.0
+    EXTREME_HOT_TEMPERATURE = 40.0
+    COLD_TEMPERATURE = 15.0
+    
+    # ML константы
+    BASE_CONFIDENCE = 0.7
+    MIN_TRAINING_SAMPLES = 10
+    
+    # Fuel расчеты
+    DEFAULT_FUEL_CONSUMPTION = 3.5  # л/мин
+    FUEL_SAFETY_MARGIN = 1.2  # 20% запас
 
 
 class ErrorMessages:
     """Сообщения об ошибках"""
-    # УБРАЛИ телеметрию:
-    # TELEMETRY_CONNECTION_FAILED = "Не удалось подключиться к телеметрии"
-    # TELEMETRY_DATA_INVALID = "Некорректные данные телеметрии"
-    # TELEMETRY_TIMEOUT = "Таймаут соединения с телеметрией"
+    # Телеметрия
+    TELEMETRY_CONNECTION_FAILED = "Не удалось подключиться к телеметрии"
+    TELEMETRY_DATA_INVALID = "Некорректные данные телеметрии"
+    TELEMETRY_TIMEOUT = "Таймаут соединения с телеметрией"
     
     # База данных
     DATABASE_CONNECTION_FAILED = "Не удалось подключиться к базе данных"
