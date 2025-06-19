@@ -20,7 +20,7 @@ try:
     from core.config_manager import ConfigManager
     from core.database import DatabaseManager
     from core.event_system import EventSystem
-    from core.constants import AppConstants, UIConstants
+    from core.constants import AppConstants, UIConstants, DatabaseConstants
     from core.exceptions import LMUAssistantError, ConfigurationError, DatabaseConnectionError
     
     # UI модули
@@ -28,7 +28,7 @@ try:
     from ui.telemetry_tab import TelemetryTab
     from ui.progress_tab import ProgressTab
     from ui.trainer_tab import TrainerTab
-    from ui.encyclopedia import EncyclopediaTab
+    # УБРАЛИ: from ui.encyclopedia import EncyclopediaTab
     from ui.overlay_control import OverlayControl
     from ui.preferences_dialog import PreferencesDialog
     
@@ -61,71 +61,42 @@ class MainWindow(QMainWindow):
             # Показываем предупреждение пользователю
             QMessageBox.warning(None, "Database Error", 
                               f"Failed to initialize database: {e}\n\nSome features may not work properly.")
-        except Exception as e:
-            self.logger.error(f"Unexpected database error: {e}")
-            self.database = None
         
+        # Инициализация UI
         self.setup_ui()
         self.setup_window()
+        self.setup_update_timer()
         
-        # Таймер для периодических обновлений
-        self.update_timer = QTimer()
-        self.update_timer.timeout.connect(self.periodic_update)
-        self.update_timer.start(UIConstants.STATUS_BAR_UPDATE_INTERVAL)
-        
-        self.logger.info("LMU Assistant started successfully")
+        self.logger.info(f"{AppConstants.APP_NAME} v{AppConstants.VERSION} started")
     
     def setup_ui(self):
         """Настройка пользовательского интерфейса"""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        layout = QVBoxLayout(central_widget)
-        
-        # Создаем вкладки
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #3c3c3c;
-                background-color: #2b2b2b;
-            }
-            QTabBar::tab {
-                background-color: #4a4a4a;
-                color: #ffffff;
-                padding: 12px 20px;
-                margin: 2px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QTabBar::tab:selected {
-                background-color: #0078d4;
-            }
-            QTabBar::tab:hover {
-                background-color: #5a5a5a;
-            }
-        """)
-        
-        # Добавляем вкладки
-        self.setup_tabs()
-        
-        layout.addWidget(self.tab_widget)
-        
-        # Строка состояния
-        self.statusBar().showMessage("LMU Assistant готов к работе")
-        self.statusBar().setStyleSheet("""
-            QStatusBar {
-                background-color: #3c3c3c;
-                color: #ffffff;
-                border-top: 1px solid #555555;
-            }
-        """)
+        try:
+            # Центральный виджет
+            central_widget = QWidget()
+            self.setCentralWidget(central_widget)
+            
+            # Layout
+            layout = QVBoxLayout(central_widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            
+            # Tab Widget
+            self.tab_widget = QTabWidget()
+            layout.addWidget(self.tab_widget)
+            
+            # Создаем вкладки
+            self.setup_tabs()
+            
+        except Exception as e:
+            self.logger.error(f"Error setting up UI: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось создать интерфейс: {e}")
     
     def setup_tabs(self):
-        """Настройка вкладок"""
+        """Создание вкладок приложения"""
         try:
-            # Вкладка Setup Expert (Гараж)
+            # Вкладка гаража (Setup Expert)
             self.garage_tab = GarageTab(self)
-            self.tab_widget.addTab(self.garage_tab, "🏎️ Setup Expert")
+            self.tab_widget.addTab(self.garage_tab, "🔧 Гараж")
             
             # Вкладка телеметрии
             self.telemetry_tab = TelemetryTab(self)
@@ -139,9 +110,9 @@ class MainWindow(QMainWindow):
             self.trainer_tab = TrainerTab(self)
             self.tab_widget.addTab(self.trainer_tab, "🎯 Тренер")
             
-            # Вкладка энциклопедии
-            self.encyclopedia_tab = EncyclopediaTab(self)
-            self.tab_widget.addTab(self.encyclopedia_tab, "📚 Энциклопедия")
+            # УБРАЛИ ЭНЦИКЛОПЕДИЮ:
+            # self.encyclopedia_tab = EncyclopediaTab(self)
+            # self.tab_widget.addTab(self.encyclopedia_tab, "📚 Энциклопедия")
             
             # Вкладка оверлея
             self.overlay_tab = OverlayControl(self)
@@ -176,51 +147,53 @@ class MainWindow(QMainWindow):
         width = window_config.get('width', UIConstants.DEFAULT_WINDOW_WIDTH)
         height = window_config.get('height', UIConstants.DEFAULT_WINDOW_HEIGHT)
         
-        # Проверяем минимальные размеры
+        # Валидация размеров
         width = max(width, UIConstants.MIN_WINDOW_WIDTH)
         height = max(height, UIConstants.MIN_WINDOW_HEIGHT)
         
         self.resize(width, height)
         
-        position = window_config.get('position', [100, 100])
-        self.move(position[0], position[1])
+        # Позиция окна
+        if 'position' in window_config:
+            pos = window_config['position']
+            if isinstance(pos, list) and len(pos) == 2:
+                self.move(pos[0], pos[1])
         
+        # Максимизировано ли окно
         if window_config.get('maximized', False):
             self.showMaximized()
-        
-        # Стиль окна
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {UIConstants.BACKGROUND_COLOR};
-                color: {UIConstants.FOREGROUND_COLOR};
-            }}
-            QWidget {{
-                background-color: {UIConstants.BACKGROUND_COLOR};
-                color: {UIConstants.FOREGROUND_COLOR};
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }}
-        """)
     
-    def periodic_update(self):
-        """Периодическое обновление"""
+    def setup_update_timer(self):
+        """Настройка таймера обновлений"""
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_status)
+        self.update_timer.start(UIConstants.STATUS_BAR_UPDATE_INTERVAL)
+    
+    def update_status(self):
+        """Обновление статусной информации"""
         try:
-            # Обновляем строку состояния
-            current_tab_index = self.tab_widget.currentIndex()
-            tab_names = ["Setup Expert", "Телеметрия", "Прогресс", "Тренер", "Энциклопедия", "Оверлей"]
+            # Базовая статусная информация
+            status_parts = []
             
-            if 0 <= current_tab_index < len(tab_names):
-                status_message = f"Активна вкладка: {tab_names[current_tab_index]}"
-                
-                # Добавляем информацию о базе данных
-                if self.database:
-                    status_message += " | БД: подключена"
+            # Статус телеметрии
+            if hasattr(self, 'telemetry_tab') and self.telemetry_tab:
+                if hasattr(self.telemetry_tab, 'is_connected') and self.telemetry_tab.is_connected():
+                    status_parts.append("📡 Подключено")
                 else:
-                    status_message += " | БД: отключена"
-                
-                self.statusBar().showMessage(status_message)
-        
+                    status_parts.append("📡 Отключено")
+            
+            # Статус базы данных
+            if self.database:
+                status_parts.append("🗄️ БД OK")
+            else:
+                status_parts.append("🗄️ БД Ошибка")
+            
+            # Обновляем статусную строку
+            status_text = " | ".join(status_parts)
+            self.statusBar().showMessage(status_text)
+            
         except Exception as e:
-            self.logger.warning(f"Error in periodic update: {e}")
+            self.logger.error(f"Error updating status: {e}")
     
     def closeEvent(self, event):
         """Обработка закрытия приложения"""
@@ -243,7 +216,8 @@ class MainWindow(QMainWindow):
             # Закрываем соединения и освобождаем ресурсы
             if hasattr(self, 'overlay_tab') and self.overlay_tab:
                 try:
-                    self.overlay_tab.cleanup()
+                    if hasattr(self.overlay_tab, 'cleanup'):
+                        self.overlay_tab.cleanup()
                 except Exception as e:
                     self.logger.error(f"Error cleaning up overlay: {e}")
             
@@ -254,7 +228,7 @@ class MainWindow(QMainWindow):
                     self.logger.error(f"Error closing database: {e}")
             
             # Останавливаем таймер
-            if self.update_timer and self.update_timer.isActive():
+            if hasattr(self, 'update_timer') and self.update_timer and self.update_timer.isActive():
                 self.update_timer.stop()
             
             self.logger.info("Application closed successfully")
@@ -289,13 +263,9 @@ def setup_logging(config_manager: ConfigManager) -> bool:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         
-        # Корневой логгер
+        # Настройка корневого логгера
         root_logger = logging.getLogger()
         root_logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
-        
-        # Очищаем существующие хендлеры
-        root_logger.handlers.clear()
-        
         root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
         
@@ -306,149 +276,34 @@ def setup_logging(config_manager: ConfigManager) -> bool:
         return False
 
 
-def check_dependencies() -> bool:
-    """Проверка необходимых зависимостей"""
-    missing_deps = []
-    
-    try:
-        import PyQt5
-    except ImportError:
-        missing_deps.append("PyQt5")
-    
-    try:
-        import numpy
-    except ImportError:
-        missing_deps.append("numpy")
-    
-    try:
-        import matplotlib
-    except ImportError:
-        missing_deps.append("matplotlib")
-    
-    if missing_deps:
-        print("Missing required dependencies:")
-        for dep in missing_deps:
-            print(f"  - {dep}")
-        print("\nPlease install missing dependencies using:")
-        print("pip install " + " ".join(missing_deps))
-        return False
-    
-    return True
-
-
-def create_directories() -> bool:
-    """Создание необходимых директорий"""
-    directories = [
-        AppConstants.CONFIG_DIR,
-        AppConstants.LOG_DIR,
-        AppConstants.ASSETS_DIR,
-        AppConstants.DATA_DIR,
-        AppConstants.MODELS_DIR
-    ]
-    
-    success = True
-    for directory in directories:
-        try:
-            Path(directory).mkdir(exist_ok=True)
-        except Exception as e:
-            print(f"Warning: Could not create directory {directory}: {e}")
-            success = False
-    
-    return success
-
-
-def check_data_files() -> bool:
-    """Проверка наличия необходимых файлов данных"""
-    data_file = Path(AppConstants.DATA_DIR) / "lmu_data.json"
-    
-    if not data_file.exists():
-        print(f"Warning: Data file not found: {data_file}")
-        print("Some features may not work properly without the data file.")
-        return False
-    
-    return True
-
-
 def main():
-    """Основная функция приложения"""
+    """Главная функция приложения"""
+    # Создание приложения QT
+    app = QApplication(sys.argv)
+    app.setApplicationName(AppConstants.APP_NAME)
+    app.setApplicationVersion(AppConstants.VERSION)
+    app.setOrganizationName(AppConstants.ORGANIZATION)
+    
     try:
-        # Проверяем зависимости
-        if not check_dependencies():
-            return 1
-        
-        # Создаем необходимые директории
-        create_directories()
-        
-        # Настройка высокого DPI
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-        
-        # Создание приложения
-        app = QApplication(sys.argv)
-        app.setApplicationName(AppConstants.APP_NAME)
-        app.setApplicationVersion(AppConstants.VERSION)
-        app.setOrganizationName(AppConstants.ORGANIZATION)
-        
-        # Инициализация конфигурации
-        try:
-            config_manager = ConfigManager()
-        except ConfigurationError as e:
-            print(f"Configuration error: {e}")
-            QMessageBox.critical(None, "Configuration Error", str(e))
-            return 1
+        # Инициализация менеджера конфигурации
+        config_manager = ConfigManager()
         
         # Настройка логирования
-        setup_logging(config_manager)
-        logger = logging.getLogger(__name__)
-        
-        logger.info("=" * 50)
-        logger.info(f"Starting {AppConstants.APP_NAME} v{AppConstants.VERSION}")
-        logger.info("=" * 50)
-        
-        # Проверяем файлы данных
-        check_data_files()
-        
-        # Создание и отображение главного окна
-        try:
-            window = MainWindow(config_manager)
-            window.show()
-            
-            logger.info("Main window displayed successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to create main window: {e}")
-            QMessageBox.critical(None, "Startup Error", 
-                               f"Failed to create main window:\n{e}")
+        if not setup_logging(config_manager):
+            QMessageBox.critical(None, "Ошибка", "Не удалось настроить систему логирования")
             return 1
         
-        # Запуск цикла событий
-        exit_code = app.exec_()
+        # Создание основного окна
+        main_window = MainWindow(config_manager)
+        main_window.show()
         
-        logger.info(f"Application exited with code: {exit_code}")
-        return exit_code
-        
-    except KeyboardInterrupt:
-        print("\nApplication interrupted by user")
-        return 130
+        # Запуск приложения
+        return app.exec_()
         
     except Exception as e:
-        print(f"Critical error during application startup: {e}")
-        
-        # Логируем если возможно
-        try:
-            logger = logging.getLogger(__name__)
-            logger.critical(f"Critical startup error: {e}", exc_info=True)
-        except:
-            pass
-        
-        # Показываем диалог с ошибкой если возможно
-        try:
-            if 'app' in locals():
-                QMessageBox.critical(None, "Критическая ошибка", 
-                                   f"Не удалось запустить приложение:\n{e}")
-        except:
-            pass
-        
+        error_msg = f"Critical error starting application: {e}"
+        print(error_msg)
+        QMessageBox.critical(None, "Критическая ошибка", error_msg)
         return 1
 
 
