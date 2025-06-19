@@ -25,11 +25,11 @@ try:
     
     # UI модули
     from ui.garage import GarageTab
-    from ui.telemetry_tab import TelemetryTab
     from ui.progress_tab import ProgressTab
     from ui.trainer_tab import TrainerTab
+    # УБРАЛИ: from ui.telemetry_tab import TelemetryTab
     # УБРАЛИ: from ui.encyclopedia import EncyclopediaTab
-    from ui.overlay_control import OverlayControl
+    # УБРАЛИ: from ui.overlay_control import OverlayControl
     from ui.preferences_dialog import PreferencesDialog
     
 except ImportError as e:
@@ -98,9 +98,9 @@ class MainWindow(QMainWindow):
             self.garage_tab = GarageTab(self)
             self.tab_widget.addTab(self.garage_tab, "🔧 Гараж")
             
-            # Вкладка телеметрии
-            self.telemetry_tab = TelemetryTab(self)
-            self.tab_widget.addTab(self.telemetry_tab, "📡 Телеметрия")
+            # УБРАЛИ ТЕЛЕМЕТРИЮ:
+            # self.telemetry_tab = TelemetryTab(self)
+            # self.tab_widget.addTab(self.telemetry_tab, "📡 Телеметрия")
             
             # Вкладка прогресса
             self.progress_tab = ProgressTab(self)
@@ -114,9 +114,9 @@ class MainWindow(QMainWindow):
             # self.encyclopedia_tab = EncyclopediaTab(self)
             # self.tab_widget.addTab(self.encyclopedia_tab, "📚 Энциклопедия")
             
-            # Вкладка оверлея
-            self.overlay_tab = OverlayControl(self)
-            self.tab_widget.addTab(self.overlay_tab, "🖥️ Оверлей")
+            # УБРАЛИ ОВЕРЛЕЙ:
+            # self.overlay_tab = OverlayControl(self)
+            # self.tab_widget.addTab(self.overlay_tab, "🖥️ Оверлей")
             
             # Устанавливаем вкладку по умолчанию
             default_tab = self.config_manager.get_setting('ui', 'tabs.default_tab', 0)
@@ -175,18 +175,21 @@ class MainWindow(QMainWindow):
             # Базовая статусная информация
             status_parts = []
             
-            # Статус телеметрии
-            if hasattr(self, 'telemetry_tab') and self.telemetry_tab:
-                if hasattr(self.telemetry_tab, 'is_connected') and self.telemetry_tab.is_connected():
-                    status_parts.append("📡 Подключено")
-                else:
-                    status_parts.append("📡 Отключено")
+            # УБРАЛИ СТАТУС ТЕЛЕМЕТРИИ:
+            # if hasattr(self, 'telemetry_tab') and self.telemetry_tab:
+            #     if hasattr(self.telemetry_tab, 'is_connected') and self.telemetry_tab.is_connected():
+            #         status_parts.append("📡 Подключено")
+            #     else:
+            #         status_parts.append("📡 Отключено")
             
             # Статус базы данных
             if self.database:
                 status_parts.append("🗄️ БД OK")
             else:
                 status_parts.append("🗄️ БД Ошибка")
+            
+            # Статус приложения
+            status_parts.append(f"🏁 LMU Assistant v{AppConstants.VERSION}")
             
             # Обновляем статусную строку
             status_text = " | ".join(status_parts)
@@ -209,103 +212,3 @@ class MainWindow(QMainWindow):
             }
             
             try:
-                self.config_manager.update_ui_config({'window': window_config})
-            except Exception as e:
-                self.logger.error(f"Failed to save window config: {e}")
-            
-            # Закрываем соединения и освобождаем ресурсы
-            if hasattr(self, 'overlay_tab') and self.overlay_tab:
-                try:
-                    if hasattr(self.overlay_tab, 'cleanup'):
-                        self.overlay_tab.cleanup()
-                except Exception as e:
-                    self.logger.error(f"Error cleaning up overlay: {e}")
-            
-            if self.database:
-                try:
-                    self.database.close()
-                except Exception as e:
-                    self.logger.error(f"Error closing database: {e}")
-            
-            # Останавливаем таймер
-            if hasattr(self, 'update_timer') and self.update_timer and self.update_timer.isActive():
-                self.update_timer.stop()
-            
-            self.logger.info("Application closed successfully")
-            event.accept()
-            
-        except Exception as e:
-            self.logger.error(f"Error during application close: {e}")
-            event.accept()  # Закрываем в любом случае
-
-
-def setup_logging(config_manager: ConfigManager) -> bool:
-    """Настройка системы логирования"""
-    try:
-        # Создаем директорию для логов
-        log_dir = Path(AppConstants.LOG_DIR)
-        log_dir.mkdir(exist_ok=True)
-        
-        # Получаем уровень логирования из конфигурации
-        log_level = config_manager.get_setting('main', 'log_level', 'INFO')
-        
-        # Настройка форматирования
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        
-        # Файл-хендлер
-        log_file = log_dir / 'lmu_assistant.log'
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
-        file_handler.setFormatter(formatter)
-        
-        # Консоль-хендлер
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        
-        # Настройка корневого логгера
-        root_logger = logging.getLogger()
-        root_logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
-        root_logger.addHandler(file_handler)
-        root_logger.addHandler(console_handler)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Failed to setup logging: {e}")
-        return False
-
-
-def main():
-    """Главная функция приложения"""
-    # Создание приложения QT
-    app = QApplication(sys.argv)
-    app.setApplicationName(AppConstants.APP_NAME)
-    app.setApplicationVersion(AppConstants.VERSION)
-    app.setOrganizationName(AppConstants.ORGANIZATION)
-    
-    try:
-        # Инициализация менеджера конфигурации
-        config_manager = ConfigManager()
-        
-        # Настройка логирования
-        if not setup_logging(config_manager):
-            QMessageBox.critical(None, "Ошибка", "Не удалось настроить систему логирования")
-            return 1
-        
-        # Создание основного окна
-        main_window = MainWindow(config_manager)
-        main_window.show()
-        
-        # Запуск приложения
-        return app.exec_()
-        
-    except Exception as e:
-        error_msg = f"Critical error starting application: {e}"
-        print(error_msg)
-        QMessageBox.critical(None, "Критическая ошибка", error_msg)
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
