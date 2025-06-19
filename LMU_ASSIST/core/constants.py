@@ -87,96 +87,26 @@ class UIConstants:
 
 
 class DatabaseConstants:
-    """Константы базы данных"""
+    """Константы для базы данных"""
+    # Основные настройки
     DEFAULT_DB_NAME = "lmu_data.db"
+    CONNECTION_TIMEOUT = 30.0
     
-    # Лимиты
-    MAX_SESSIONS_DISPLAY = 50
-    MAX_LAPS_DISPLAY = 100
-    MAX_COMPLETED_LAPS_STORE = 50
+    # Размеры
+    MAX_QUERY_LENGTH = 10000
+    MAX_RESULT_ROWS = 10000
     
-    # Таймауты
-    DB_CONNECTION_TIMEOUT = 30.0  # секунд
-    DB_QUERY_TIMEOUT = 10.0  # секунд
-
-    DB_BACKUP_INTERVAL = 3600  # секунд (1 час)
+    # Backup
+    BACKUP_INTERVAL = 3600  # секунд
+    MAX_BACKUP_FILES = 5
     
-    # Очистка
-    AUTO_CLEANUP_DAYS = 90  # дней для хранения старых данных
-
-
-class MLConstants:
-    """Константы для машинного обучения"""
-    # Обучение
-    MIN_TRAINING_SAMPLES = 10
-    RETRAIN_INTERVAL = 50  # новых образцов
-    CROSS_VALIDATION_FOLDS = 3
-    
-    # Модели
-    RANDOM_FOREST_ESTIMATORS = 100
-    GRADIENT_BOOSTING_ESTIMATORS = 100
-    MLP_HIDDEN_LAYERS = (100, 50)
-    
-    # Уверенность и пороги
-    MIN_CONFIDENCE = 0.1
-    MAX_CONFIDENCE = 0.95
-    CONFIDENCE_THRESHOLD = 0.8
-    
-    # Оптимизация настроек
-    MAX_SETUP_CANDIDATES = 50
-    SETUP_VARIATION_PROBABILITY = 0.3
-    
-    # Предсказания
-    INCIDENT_RISK_WINDOW = 5  # количество точек данных
-    TELEMETRY_HISTORY_LENGTH = 100
-
-
-class SetupConstants:
-    """Константы для настройки автомобилей"""
-    # Базовые диапазоны настроек
-    WING_RANGE = (1, 15)
-    BRAKE_BIAS_RANGE = (50, 70)
-    TIRE_PRESSURE_RANGE = (20, 30)
-    SPRING_RANGE = (10, 100)
-    DIFFERENTIAL_RANGE = (10, 90)
-    
-    # Температурные пороги
-    COLD_TEMPERATURE = 15  # °C
-    OPTIMAL_TEMPERATURE = 25  # °C
-    HOT_TEMPERATURE = 35  # °C
-    EXTREME_HOT_TEMPERATURE = 45  # °C
-    
-    # Корректировки
-    MAX_WING_ADJUSTMENT = 5
-    MAX_PRESSURE_ADJUSTMENT = 2.5
-    MAX_BIAS_ADJUSTMENT = 5
-    
-    # Оценка уверенности
-    BASE_CONFIDENCE = 0.5
-    MAX_CONFIDENCE_FACTORS = 5
-
-
-class AnalysisConstants:
-    """Константы для анализа и тренировки"""
-    # Пороги качества вождения
-    BRAKING_EFFICIENCY_THRESHOLD = 0.85
-    THROTTLE_SMOOTHNESS_THRESHOLD = 0.8
-    STEERING_SMOOTHNESS_THRESHOLD = 0.75
-    CONSISTENCY_THRESHOLD = 0.95
-    
-    # Анализ секторов
-    SECTOR_DEVIATION_THRESHOLD = 2.0  # секунды
-    MIN_SECTORS_FOR_ANALYSIS = 3
-    
-    # Тренировки
-    DEFAULT_SESSION_TIME = "45-60 минут"
-    MAX_TRAINING_AREAS = 3
-    MIN_EXERCISE_TIME = 15  # минут
-    MAX_EXERCISE_TIME = 30  # минут
-    
-    # Скользящие окна для анализа
-    CONSISTENCY_WINDOW_SIZE = 10  # кругов
-    TELEMETRY_ANALYSIS_WINDOW = 100  # точек данных
+    # Таблицы
+    SESSIONS_TABLE = "sessions"
+    LAPS_TABLE = "laps" 
+    TELEMETRY_TABLE = "telemetry"
+    SETUPS_TABLE = "setups"
+    TRACKS_TABLE = "tracks"
+    CARS_TABLE = "cars"
 
 
 class NetworkConstants:
@@ -195,25 +125,6 @@ class NetworkConstants:
     MAX_CONSECUTIVE_ERRORS = 10
 
 
-class FileConstants:
-    """Константы для работы с файлами"""
-    # Расширения файлов
-    JSON_EXTENSION = ".json"
-    CSV_EXTENSION = ".csv"
-    LOG_EXTENSION = ".log"
-    
-    # Размеры файлов
-    MAX_LOG_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-    MAX_CONFIG_FILE_SIZE = 1024 * 1024   # 1 MB
-    
-    # Кодировки
-    DEFAULT_ENCODING = "utf-8"
-    
-    # Backup
-    MAX_BACKUP_FILES = 5
-    BACKUP_SUFFIX = ".backup"
-
-
 class ValidationConstants:
     """Константы для валидации данных"""
     # Строки
@@ -221,8 +132,8 @@ class ValidationConstants:
     MAX_FILENAME_LENGTH = 255
     
     # Числовые значения
-    MIN_LAP_TIME = 10.0   # секунд (минимальное разумное время круга)
-    MAX_LAP_TIME = 600.0  # секунд (максимальное разумное время круга)
+    MIN_LAP_TIME = 10.0   # секунд
+    MAX_LAP_TIME = 600.0  # секунд
     
     # Диапазоны телеметрии
     MIN_RPM = 0
